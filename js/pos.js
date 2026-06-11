@@ -1,16 +1,17 @@
 /**
  * POS Module
- * FIFO lot management: sells from oldest lot first, updates CantidadRestante
+ * - Editable quantity and price in cart
+ * - Tax 13% included in price (no added on top)
+ * - FIFO lot management
  */
 const pos = (function() {
     let products = [];
     let cart = [];
-    const TAX_RATE = 0.16;
+    const TAX_RATE = 0.13;
 
     async function loadProducts() {
         const productData = await api.getRecords('Productos');
         const salesData = await api.getRecords('Ventas');
-
         if (!productData) return;
 
         const popularityMap = {};
@@ -102,6 +103,31 @@ const pos = (function() {
         }
     }
 
+    function setQuantity(productId, value) {
+        const item = cart.find(i => i.id === productId);
+        if (item) {
+            const newQty = parseInt(value) || 0;
+            if (newQty <= 0) { removeFromCart(productId); return; }
+            if (newQty > item.stock) {
+                ui.showToast(`Stock máximo: ${item.stock}`, 'error');
+                item.quantity = item.stock;
+            } else {
+                item.quantity = newQty;
+            }
+            renderCart();
+        }
+    }
+
+    function setPrice(productId, value) {
+        const item = cart.find(i => i.id === productId);
+        if (item) {
+            const newPrice = parseFloat(value) || 0;
+            if (newPrice < 0) return;
+            item.price = newPrice;
+            renderCart();
+        }
+    }
+
     function renderCart() {
         const container = document.getElementById('cart-items');
         const btnProcess = document.getElementById('btn-process-sale');
@@ -115,40 +141,65 @@ const pos = (function() {
 
         btnProcess.disabled = false;
         container.innerHTML = '';
-        let subtotal = 0;
+        let total = 0;
 
         cart.forEach(item => {
-            subtotal += item.price * item.quantity;
+            // Price already includes tax, so total = price * qty
+            total += item.price * item.quantity;
+
             const div = document.createElement('div');
-            div.className = 'cart-item-added flex items-center justify-between bg-gray-50 p-2 rounded border border-gray-200';
+            div.className = 'cart-item-added flex flex-col bg-gray-50 p-2 rounded border border-gray-200 mb-2';
             div.innerHTML = `
-                <div class="flex-grow">
-                    <p class="text-sm font-bold truncate w-32">${item.name}</p>
-                    <p class="text-xs text-gray-500">$${item.price.toFixed(2)} c/u</p>
+                <div class="flex items-center justify-between mb-1">
+                    <p class="text-sm font-bold truncate flex-grow">${item.name}</p>
+                    <button onclick="pos.removeFromCart('${item.id}')" class="ml-2 text-red-500 hover:text-red-700 shrink-0">
+                        <i class="fas fa-trash"></i>
+                    </button>
                 </div>
                 <div class="flex items-center space-x-2">
-                    <button onclick="pos.updateQuantity('${item.id}', -1)" class="w-6 h-6 flex items-center justify-center bg-gray-200 rounded-full hover:bg-gray-300">-</button>
-                    <span class="text-sm font-bold w-4 text-center">${item.quantity}</span>
-                    <button onclick="pos.updateQuantity('${item.id}', 1)" class="w-6 h-6 flex items-center justify-center bg-gray-200 rounded-full hover:bg-gray-300">+</button>
-                    <button onclick="pos.removeFromCart('${item.id}')" class="ml-2 text-red-500 hover:text-red-700"><i class="fas fa-trash"></i></button>
+                    <div class="flex items-center space-x-1">
+                        <button onclick="pos.updateQuantity('${item.id}', -1)" class="w-6 h-6 flex items-center justify-center bg-gray-200 rounded-full hover:bg-gray-300 text-sm">-</button>
+                        <input
+                            type="number"
+                            min="1"
+                            max="${item.stock}"
+                            value="${item.quantity}"
+                            onchange="pos.setQuantity('${item.id}', this.value)"
+                            class="w-14 text-center text-sm font-bold border border-gray-300 rounded p-1 focus:ring-1 focus:ring-blue-400 outline-none"
+                        >
+                        <button onclick="pos.updateQuantity('${item.id}', 1)" class="w-6 h-6 flex items-center justify-center bg-gray-200 rounded-full hover:bg-gray-300 text-sm">+</button>
+                    </div>
+                    <span class="text-gray-400 text-xs">×</span>
+                    <div class="flex items-center">
+                        <span class="text-gray-500 text-xs mr-1">$</span>
+                        <input
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            value="${item.price.toFixed(2)}"
+                            onchange="pos.setPrice('${item.id}', this.value)"
+                            class="w-20 text-center text-sm font-bold text-blue-600 border border-gray-300 rounded p-1 focus:ring-1 focus:ring-blue-400 outline-none"
+                        >
+                    </div>
+                    <span class="text-xs text-gray-500 ml-auto">= $${(item.price * item.quantity).toFixed(2)}</span>
                 </div>
             `;
             container.appendChild(div);
         });
-        updateTotals(subtotal);
+
+        updateTotals(total);
     }
 
-    function updateTotals(subtotal) {
-        const tax = subtotal * TAX_RATE;
-        const total = subtotal + tax;
+    function updateTotals(total) {
+        // Tax is already included in price
+        const tax = total - (total / (1 + TAX_RATE));
+        const subtotal = total - tax;
+
         document.getElementById('cart-subtotal').textContent = `$${subtotal.toFixed(2)}`;
         document.getElementById('cart-tax').textContent = `$${tax.toFixed(2)}`;
         document.getElementById('cart-total').textContent = `$${total.toFixed(2)}`;
     }
 
-    /**
-     * FIFO: Gets active lots for a product sorted by FechaRegistro (oldest first)
-     */
     async function getFifoLots(productID) {
         const allLots = await api.getRecords('Compras');
         if (!allLots) return [];
@@ -157,31 +208,23 @@ const pos = (function() {
             .sort((a, b) => new Date(a.FechaRegistro) - new Date(b.FechaRegistro));
     }
 
-    /**
-     * Processes the sale:
-     * 1. Saves sale records
-     * 2. Applies FIFO: decrements CantidadRestante on oldest lots
-     * 3. Updates product stock
-     */
     async function processSale() {
         if (cart.length === 0) return;
 
         const now = new Date().toISOString();
 
-        // 1. Save sale rows
         const saleRows = cart.map(item => ({
             ID: Math.random().toString(36).substr(2, 9).toUpperCase(),
             ProductoID: item.id,
             Cantidad: item.quantity,
             PrecioUnitario: item.price,
-            Total: parseFloat((item.price * item.quantity * (1 + TAX_RATE)).toFixed(2)),
+            Total: parseFloat((item.price * item.quantity).toFixed(2)),
             Fecha: now
         }));
 
         const saleResult = await api.addRecords('Ventas', saleRows);
         if (!saleResult) return;
 
-        // 2. FIFO lot updates + stock updates
         const lotUpdates = [];
         const stockUpdates = [];
 
@@ -193,10 +236,7 @@ const pos = (function() {
                 if (remaining <= 0) break;
                 const lotQty = parseInt(lot.CantidadRestante) || 0;
                 const consume = Math.min(lotQty, remaining);
-                lotUpdates.push({
-                    ID: lot.ID,
-                    CantidadRestante: lotQty - consume
-                });
+                lotUpdates.push({ ID: lot.ID, CantidadRestante: lotQty - consume });
                 remaining -= consume;
             }
 
@@ -221,6 +261,8 @@ const pos = (function() {
         addToCart,
         removeFromCart,
         updateQuantity,
+        setQuantity,
+        setPrice,
         processSale
     };
 })();
