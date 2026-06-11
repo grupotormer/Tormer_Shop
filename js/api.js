@@ -21,7 +21,7 @@ const api = (function() {
      * @param {Array} rows - Rows data for the action
      */
     async function request(tableName, action, rows = [], properties = {}) {
-        if (CONFIG.appId === '[TU_APPSHEET_APP_ID]' || CONFIG.accessKey === '[TU_API_KEY]') {
+        if (CONFIG.appId === '1b7152c3-48bf-47ca-91c5-4cf89da65310' || CONFIG.accessKey === 'V2-e3QP3-F2j6I-Jpc4t-Ym046-OSSkT-utwTj-S3LyZ-NmFia') {
             console.error('Error: AppSheet App ID o API Key no configurados.');
             ui.showToast('Error: Configura tus credenciales de AppSheet en api.js', 'error');
             return null;
