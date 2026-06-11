@@ -5,8 +5,8 @@
 const api = (function() {
     // [TU_APPSHEET_APP_ID] y [TU_API_KEY]
     const CONFIG = {
-        appId: '[TU_APPSHEET_APP_ID]',
-        accessKey: '[TU_API_KEY]',
+        appId: '1b7152c3-48bf-47ca-91c5-4cf89da65310',
+        accessKey: 'V2-e3QP3-F2j6I-Jpc4t-Ym046-OSSkT-utwTj-S3LyZ-NmFia',
         region: 'www' // or 'eu', 'asia-southeast'
     };
 
