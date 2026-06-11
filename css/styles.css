@@ -51,8 +51,8 @@
 /* Toast animations */
 .toast-show {
     transform: translateY(0);
+    opacity: 1 !important;
 }
-
 /* Expiration colors */
 .bg-expired {
     background-color: #fee2e2;
