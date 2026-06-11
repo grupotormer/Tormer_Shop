@@ -1,6 +1,6 @@
 /**
  * Barcode Scanner Module
- * Handles camera scanning and USB scanner input
+ * USB scanner works globally without needing focus on search input
  */
 const scanner = (function() {
     let html5QrCode;
@@ -8,23 +8,29 @@ const scanner = (function() {
     let usbBuffer = '';
     let lastKeyTime = Date.now();
 
-    /**
-     * Initializes global keyboard listener for USB Barcode Scanners
-     */
     function initUsbScanner() {
         document.addEventListener('keydown', (e) => {
+            // Ignore if user is typing in an input/textarea (except the search bar)
+            const tag = document.activeElement.tagName;
+            const isSearchBar = document.activeElement.id === 'product-search';
+            const isTyping = (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') && !isSearchBar;
+            if (isTyping) return;
+
             const currentTime = Date.now();
-            
-            // USB scanners usually type very fast. 
-            // If the time between keystrokes is very small, it's likely a scanner.
-            if (currentTime - lastKeyTime > 50) {
-                usbBuffer = ''; // Reset buffer if it's too slow (likely human typing)
+
+            if (currentTime - lastKeyTime > 100) {
+                usbBuffer = '';
             }
 
             if (e.key === 'Enter') {
                 if (usbBuffer.length > 2) {
-                    pos.addToCart(usbBuffer);
+                    // Only trigger if POS view is active
+                    const posView = document.getElementById('view-pos');
+                    if (posView && !posView.classList.contains('hidden')) {
+                        pos.addToCart(usbBuffer);
+                    }
                     usbBuffer = '';
+                    e.preventDefault();
                 }
             } else if (e.key.length === 1) {
                 usbBuffer += e.key;
@@ -34,9 +40,6 @@ const scanner = (function() {
         });
     }
 
-    /**
-     * Starts the camera-based scanner
-     */
     async function start() {
         const container = document.getElementById('scanner-container');
         container.classList.remove('hidden');
@@ -46,11 +49,7 @@ const scanner = (function() {
 
         try {
             isScanning = true;
-            await html5QrCode.start(
-                { facingMode: "environment" }, 
-                config, 
-                onScanSuccess
-            );
+            await html5QrCode.start({ facingMode: "environment" }, config, onScanSuccess);
         } catch (err) {
             console.error("Error starting scanner:", err);
             ui.showToast("No se pudo acceder a la cámara", "error");
@@ -58,9 +57,6 @@ const scanner = (function() {
         }
     }
 
-    /**
-     * Stops the camera-based scanner
-     */
     async function stop() {
         if (html5QrCode && isScanning) {
             await html5QrCode.stop();
@@ -70,21 +66,11 @@ const scanner = (function() {
     }
 
     function onScanSuccess(decodedText) {
-        console.log(`Code scanned: ${decodedText}`);
         pos.addToCart(decodedText);
-        
-        // Vibrate if supported
         if (navigator.vibrate) navigator.vibrate(100);
-        
-        // Optional: stop after one scan or keep going
-        // stop(); 
     }
 
-    // Initialize USB scanner immediately
     initUsbScanner();
 
-    return {
-        start,
-        stop
-    };
+    return { start, stop };
 })();
