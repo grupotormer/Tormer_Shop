@@ -1,6 +1,6 @@
 /**
  * Dashboard & Expiration Module
- * Visualizes metrics and monitors product health
+ * Expirations only show lots with CantidadRestante > 0 (unsold stock)
  */
 const dashboard = (function() {
     let salesChart;
@@ -9,9 +9,7 @@ const dashboard = (function() {
     async function init() {
         const salesData = await api.getRecords('Ventas');
         const productsData = await api.getRecords('Productos');
-        
         if (!salesData || !productsData) return;
-
         updateSummaryMetrics(salesData);
         renderSalesChart(salesData);
         renderTopProductsChart(salesData, productsData);
@@ -21,20 +19,13 @@ const dashboard = (function() {
         const now = new Date();
         const todayStr = now.toISOString().split('T')[0];
         const monthStr = todayStr.substring(0, 7);
-
-        let dayTotal = 0;
-        let monthTotal = 0;
+        let dayTotal = 0, monthTotal = 0;
 
         sales.forEach(s => {
-            const saleDate = s.Fecha.split('T')[0];
+            const saleDate = s.Fecha ? s.Fecha.split('T')[0] : '';
             const amount = parseFloat(s.Total) || 0;
-
-            if (saleDate === todayStr) {
-                dayTotal += amount;
-            }
-            if (saleDate.startsWith(monthStr)) {
-                monthTotal += amount;
-            }
+            if (saleDate === todayStr) dayTotal += amount;
+            if (saleDate.startsWith(monthStr)) monthTotal += amount;
         });
 
         document.getElementById('dash-sales-day').textContent = `$${dayTotal.toFixed(2)}`;
@@ -44,22 +35,18 @@ const dashboard = (function() {
 
     function renderSalesChart(sales) {
         const ctx = document.getElementById('salesChart').getContext('2d');
-        
-        // Group by last 7 days
         const last7Days = [...Array(7)].map((_, i) => {
             const d = new Date();
             d.setDate(d.getDate() - i);
             return d.toISOString().split('T')[0];
         }).reverse();
 
-        const totalsByDay = last7Days.map(date => {
-            return sales
-                .filter(s => s.Fecha.startsWith(date))
-                .reduce((sum, s) => sum + (parseFloat(s.Total) || 0), 0);
-        });
+        const totalsByDay = last7Days.map(date =>
+            sales.filter(s => s.Fecha && s.Fecha.startsWith(date))
+                 .reduce((sum, s) => sum + (parseFloat(s.Total) || 0), 0)
+        );
 
         if (salesChart) salesChart.destroy();
-        
         salesChart = new Chart(ctx, {
             type: 'line',
             data: {
@@ -73,62 +60,44 @@ const dashboard = (function() {
                     tension: 0.4
                 }]
             },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false
-            }
+            options: { responsive: true, maintainAspectRatio: false }
         });
     }
 
     function renderTopProductsChart(sales, products) {
         const ctx = document.getElementById('topProductsChart').getContext('2d');
-        
         const salesCount = {};
         sales.forEach(s => {
             salesCount[s.ProductoID] = (salesCount[s.ProductoID] || 0) + (parseInt(s.Cantidad) || 1);
         });
 
-        const sorted = Object.entries(salesCount)
-            .sort((a, b) => b[1] - a[1])
-            .slice(0, 5);
-
+        const sorted = Object.entries(salesCount).sort((a, b) => b[1] - a[1]).slice(0, 5);
         const labels = sorted.map(([id]) => {
             const p = products.find(prod => prod.ID === id);
             return p ? p.Nombre : 'Desconocido';
         });
-        const data = sorted.map(s => s[1]);
 
         if (topProductsChart) topProductsChart.destroy();
-
         topProductsChart = new Chart(ctx, {
             type: 'bar',
             data: {
-                labels: labels,
+                labels,
                 datasets: [{
                     label: 'Unidades Vendidas',
-                    data: data,
-                    backgroundColor: [
-                        '#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'
-                    ]
+                    data: sorted.map(s => s[1]),
+                    backgroundColor: ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6']
                 }]
             },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                indexAxis: 'y'
-            }
+            options: { responsive: true, maintainAspectRatio: false, indexAxis: 'y' }
         });
     }
 
     /**
-     * Expiration Monitor Logic
+     * Expiration Monitor — only shows lots with stock remaining (CantidadRestante > 0)
      */
     async function loadExpirations() {
-        // AppSheet usually stores expirations in 'Compras' (lots) or 'Productos'
-        // Let's assume we check the 'Compras' table for active stock lots
         const purchases = await api.getRecords('Compras');
         const products = await api.getRecords('Productos');
-
         if (!purchases || !products) return;
 
         const tableBody = document.getElementById('expirations-table-body');
@@ -138,14 +107,16 @@ const dashboard = (function() {
         const thirtyDaysFromNow = new Date();
         thirtyDaysFromNow.setDate(now.getDate() + 30);
 
-        purchases.forEach(p => {
+        // Only lots that still have stock (CantidadRestante > 0)
+        const activeLots = purchases.filter(p => parseInt(p.CantidadRestante) > 0);
+
+        activeLots.forEach(p => {
             if (!p.FechaVencimiento) return;
 
             const expiryDate = new Date(p.FechaVencimiento);
             const product = products.find(prod => prod.ID === p.ProductoID);
-            
-            let status = '';
-            let rowClass = '';
+
+            let status = '', rowClass = '';
 
             if (expiryDate < now) {
                 status = 'VENCIDO';
@@ -154,15 +125,15 @@ const dashboard = (function() {
                 status = 'PRÓXIMO A VENCER';
                 rowClass = 'bg-warning-expiry';
             } else {
-                return; // Only show alerts
+                return;
             }
 
             const tr = document.createElement('tr');
             tr.className = rowClass;
             tr.innerHTML = `
                 <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">${product ? product.Nombre : '---'}</td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm">${product ? product.CodigoBarras : '---'}</td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm">${p.FechaVencimiento}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm">${product ? (product.CodigoBarras || '---') : '---'}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm">${p.FechaVencimiento} <span class="text-xs text-gray-500">(${p.CantidadRestante} uds)</span></td>
                 <td class="px-6 py-4 whitespace-nowrap"><span class="px-2 py-1 rounded-full text-xs font-bold">${status}</span></td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm">
                     <button class="text-blue-600 hover:text-blue-900"><i class="fas fa-eye"></i></button>
@@ -176,8 +147,5 @@ const dashboard = (function() {
         }
     }
 
-    return {
-        init,
-        loadExpirations
-    };
+    return { init, loadExpirations };
 })();
