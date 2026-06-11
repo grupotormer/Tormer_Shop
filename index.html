@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>POS Minorista - AppSheet Integration</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://unpkg.com/html5-qrcode"></script>
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body class="bg-gray-100 font-sans antialiased">
+
+    <!-- Navigation Bar -->
+    <nav class="bg-blue-600 text-white shadow-lg sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4">
+            <div class="flex justify-between items-center h-16">
+                <div class="flex items-center space-x-4">
+                    <span class="text-xl font-bold"><i class="fas fa-store mr-2"></i>POS AppSheet</span>
+                    <div class="hidden md:flex space-x-4">
+                        <button onclick="ui.switchView('pos')" class="hover:bg-blue-700 px-3 py-2 rounded transition">POS</button>
+                        <button onclick="ui.switchView('inventory')" class="hover:bg-blue-700 px-3 py-2 rounded transition">Abastecimiento</button>
+                        <button onclick="ui.switchView('dashboard')" class="hover:bg-blue-700 px-3 py-2 rounded transition">Dashboard</button>
+                        <button onclick="ui.switchView('expirations')" class="hover:bg-blue-700 px-3 py-2 rounded transition">Vencimientos</button>
+                    </div>
+                </div>
+                <div class="md:hidden">
+                    <button id="mobile-menu-button" class="text-white focus:outline-none">
+                        <i class="fas fa-bars text-2xl"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+        <!-- Mobile Menu -->
+        <div id="mobile-menu" class="hidden md:hidden bg-blue-700 px-4 pt-2 pb-3 space-y-1">
+            <button onclick="ui.switchView('pos')" class="block w-full text-left px-3 py-2 rounded hover:bg-blue-800">POS</button>
+            <button onclick="ui.switchView('inventory')" class="block w-full text-left px-3 py-2 rounded hover:bg-blue-800">Abastecimiento</button>
+            <button onclick="ui.switchView('dashboard')" class="block w-full text-left px-3 py-2 rounded hover:bg-blue-800">Dashboard</button>
+            <button onclick="ui.switchView('expirations')" class="block w-full text-left px-3 py-2 rounded hover:bg-blue-800">Vencimientos</button>
+        </div>
+    </nav>
+
+    <main class="max-w-7xl mx-auto p-4">
+        
+        <!-- POS View -->
+        <section id="view-pos" class="view-section">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- Product Catalog & Search -->
+                <div class="lg:col-span-2 space-y-4">
+                    <div class="bg-white p-4 rounded-lg shadow flex flex-col md:flex-row space-y-2 md:space-y-0 md:space-x-4 items-center">
+                        <div class="relative flex-grow w-full">
+                            <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-500">
+                                <i class="fas fa-search"></i>
+                            </span>
+                            <input type="text" id="product-search" placeholder="Buscar producto por nombre o código..." class="pl-10 w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none">
+                        </div>
+                        <button onclick="scanner.start()" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition flex items-center shrink-0">
+                            <i class="fas fa-barcode mr-2"></i> Escanear
+                        </button>
+                    </div>
+
+                    <!-- Scanner Container (Hidden by default) -->
+                    <div id="scanner-container" class="hidden bg-white p-4 rounded-lg shadow relative">
+                        <button onclick="scanner.stop()" class="absolute top-2 right-2 text-red-500 z-10"><i class="fas fa-times-circle text-2xl"></i></button>
+                        <div id="interactive" class="w-full"></div>
+                    </div>
+
+                    <!-- Product Grid -->
+                    <div id="product-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 overflow-y-auto" style="max-height: 70vh;">
+                        <!-- Products will be injected here -->
+                    </div>
+                </div>
+
+                <!-- Shopping Cart -->
+                <div class="bg-white p-4 rounded-lg shadow flex flex-col h-fit sticky top-20">
+                    <h2 class="text-xl font-bold mb-4 border-b pb-2"><i class="fas fa-shopping-cart mr-2 text-blue-600"></i>Carrito</h2>
+                    <div id="cart-items" class="flex-grow space-y-3 mb-4 overflow-y-auto" style="max-height: 40vh;">
+                        <!-- Cart items will be injected here -->
+                        <p class="text-gray-500 text-center py-4">El carrito está vacío</p>
+                    </div>
+                    <div class="border-t pt-4 space-y-2">
+                        <div class="flex justify-between text-sm">
+                            <span>Subtotal:</span>
+                            <span id="cart-subtotal">$0.00</span>
+                        </div>
+                        <div class="flex justify-between text-sm">
+                            <span>Impuestos (16%):</span>
+                            <span id="cart-tax">$0.00</span>
+                        </div>
+                        <div class="flex justify-between text-xl font-bold text-blue-700">
+                            <span>Total:</span>
+                            <span id="cart-total">$0.00</span>
+                        </div>
+                        <button id="btn-process-sale" onclick="pos.processSale()" class="w-full bg-green-500 text-white font-bold py-3 rounded-lg hover:bg-green-600 transition shadow-md mt-4 disabled:bg-gray-400 disabled:cursor-not-allowed">
+                            PROCESAR VENTA
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Inventory View (Abastecimiento) -->
+        <section id="view-inventory" class="view-section hidden">
+            <div class="max-w-2xl mx-auto bg-white p-8 rounded-lg shadow-lg">
+                <h2 class="text-2xl font-bold mb-6 text-gray-800 border-b pb-2">Registro de Abastecimiento</h2>
+                <form id="inventory-form" class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Producto</label>
+                        <select id="inv-product-select" class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" required>
+                            <option value="">Seleccione un producto...</option>
+                        </select>
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Cantidad Comprada</label>
+                            <input type="number" id="inv-quantity" min="1" class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm" required>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Costo Unitario</label>
+                            <input type="number" step="0.01" id="inv-cost" class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm" required>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Precio de Venta Sugerido</label>
+                            <input type="number" step="0.01" id="inv-price" class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm" required>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Fecha de Vencimiento</label>
+                            <input type="date" id="inv-expiry" class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm">
+                        </div>
+                    </div>
+                    <div class="pt-4">
+                        <button type="submit" class="w-full bg-blue-600 text-white font-bold py-2 rounded-lg hover:bg-blue-700 transition">
+                            Guardar Abastecimiento
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </section>
+
+        <!-- Dashboard View -->
+        <section id="view-dashboard" class="view-section hidden">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8 text-center">
+                <div class="bg-white p-6 rounded-lg shadow border-l-4 border-blue-500">
+                    <p class="text-gray-500 text-sm uppercase font-bold">Ventas del Día</p>
+                    <p id="dash-sales-day" class="text-3xl font-black text-gray-800">$0.00</p>
+                </div>
+                <div class="bg-white p-6 rounded-lg shadow border-l-4 border-green-500">
+                    <p class="text-gray-500 text-sm uppercase font-bold">Ventas del Mes</p>
+                    <p id="dash-sales-month" class="text-3xl font-black text-gray-800">$0.00</p>
+                </div>
+                <div class="bg-white p-6 rounded-lg shadow border-l-4 border-purple-500">
+                    <p class="text-gray-500 text-sm uppercase font-bold">Transacciones Totales</p>
+                    <p id="dash-total-trans" class="text-3xl font-black text-gray-800">0</p>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <div class="bg-white p-6 rounded-lg shadow">
+                    <h3 class="text-lg font-bold mb-4">Ventas de la Semana</h3>
+                    <canvas id="salesChart" height="200"></canvas>
+                </div>
+                <div class="bg-white p-6 rounded-lg shadow">
+                    <h3 class="text-lg font-bold mb-4">Top 5 Productos Más Vendidos</h3>
+                    <canvas id="topProductsChart" height="200"></canvas>
+                </div>
+            </div>
+        </section>
+
+        <!-- Expirations View -->
+        <section id="view-expirations" class="view-section hidden">
+            <div class="bg-white p-6 rounded-lg shadow overflow-hidden">
+                <h2 class="text-2xl font-bold mb-6 text-gray-800"><i class="fas fa-calendar-times mr-2 text-red-500"></i>Monitor de Vencimientos</h2>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Producto</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Código</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Lote / Fecha</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Acción</th>
+                            </tr>
+                        </thead>
+                        <tbody id="expirations-table-body" class="bg-white divide-y divide-gray-200">
+                            <!-- Rows will be injected here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Success/Error Toast -->
+    <div id="toast" class="fixed bottom-5 right-5 hidden transform translate-y-full transition-transform duration-300 ease-in-out z-[100]">
+        <div id="toast-content" class="px-6 py-3 rounded-lg shadow-2xl text-white font-bold flex items-center">
+            <span id="toast-icon" class="mr-3"></span>
+            <span id="toast-message"></span>
+        </div>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div id="loading-overlay" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[200] hidden">
+        <div class="bg-white p-5 rounded-lg flex items-center space-x-3">
+            <div class="animate-spin rounded-full h-8 w-8 border-4 border-blue-500 border-t-transparent"></div>
+            <span class="font-bold text-gray-700">Procesando...</span>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="js/api.js"></script>
+    <script src="js/ui.js"></script>
+    <script src="js/pos.js"></script>
+    <script src="js/inventory.js"></script>
+    <script src="js/dashboard.js"></script>
+    <script src="js/scanner.js"></script>
+    <script>
+        // Initial setup
+        document.addEventListener('DOMContentLoaded', () => {
+            ui.init();
+        });
+
+        // Mobile menu toggle
+        document.getElementById('mobile-menu-button').addEventListener('click', () => {
+            const menu = document.getElementById('mobile-menu');
+            menu.classList.toggle('hidden');
+        });
+    </script>
+</body>
+</html>
