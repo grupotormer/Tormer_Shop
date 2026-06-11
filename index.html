@@ -101,45 +101,81 @@
         </section>
 
         <!-- Inventory View (Abastecimiento) -->
+        <!-- Inventory View (Abastecimiento) -->
         <section id="view-inventory" class="view-section hidden">
-            <div class="max-w-2xl mx-auto bg-white p-8 rounded-lg shadow-lg">
+            <div class="max-w-3xl mx-auto bg-white p-8 rounded-lg shadow-lg">
                 <h2 class="text-2xl font-bold mb-6 text-gray-800 border-b pb-2">Registro de Abastecimiento</h2>
-                <form id="inventory-form" class="space-y-4">
+
+                <!-- Item entry form -->
+                <div class="space-y-4 mb-6">
                     <div>
                         <label class="block text-sm font-medium text-gray-700">Producto</label>
-                        <select id="inv-product-select" class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" required>
-                            <option value="">Seleccione un producto...</option>
+                        <select id="inv-product-select" class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                            <option value="">Seleccione un producto existente...</option>
+                            <option value="__NEW__">+ Crear nuevo producto</option>
                         </select>
                     </div>
+
+                    <!-- New product fields (hidden by default) -->
+                    <div id="new-product-fields" class="hidden bg-yellow-50 border border-yellow-200 rounded-lg p-4 space-y-3">
+                        <p class="text-sm font-bold text-yellow-800">Datos del nuevo producto</p>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-xs font-medium text-gray-700">Nombre *</label>
+                                <input type="text" id="inv-new-name" class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm text-sm">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-gray-700">Código de Barras</label>
+                                <input type="text" id="inv-new-barcode" class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm text-sm">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-700">Categoría</label>
+                            <input type="text" id="inv-new-category" class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm text-sm">
+                        </div>
+                    </div>
+
                     <div class="grid grid-cols-2 gap-4">
                         <div>
                             <label class="block text-sm font-medium text-gray-700">Cantidad Comprada</label>
-                            <input type="number" id="inv-quantity" min="1" class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm" required>
+                            <input type="number" id="inv-quantity" min="1" class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm">
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-700">Costo Unitario</label>
-                            <input type="number" step="0.01" id="inv-cost" class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm" required>
+                            <input type="number" step="0.01" id="inv-cost" class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm">
                         </div>
                     </div>
                     <div class="grid grid-cols-2 gap-4">
                         <div>
-                            <label class="block text-sm font-medium text-gray-700">Precio de Venta Sugerido</label>
-                            <input type="number" step="0.01" id="inv-price" class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm" required>
+                            <label class="block text-sm font-medium text-gray-700">Precio de Venta</label>
+                            <input type="number" step="0.01" id="inv-price" class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm">
                         </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-700">Fecha de Vencimiento</label>
                             <input type="date" id="inv-expiry" class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm">
                         </div>
                     </div>
-                    <div class="pt-4">
-                        <button type="submit" class="w-full bg-blue-600 text-white font-bold py-2 rounded-lg hover:bg-blue-700 transition">
-                            Guardar Abastecimiento
-                        </button>
+                    <button type="button" id="btn-add-purchase-item" class="w-full bg-blue-100 text-blue-700 font-bold py-2 rounded-lg hover:bg-blue-200 transition border border-blue-300">
+                        <i class="fas fa-plus mr-2"></i>Agregar producto a la lista
+                    </button>
+                </div>
+
+                <!-- Items list -->
+                <div class="mb-6">
+                    <h3 class="text-sm font-bold text-gray-600 uppercase mb-2">Productos en esta compra</h3>
+                    <div id="purchase-items-list" class="space-y-2 min-h-12">
+                        <p class="text-gray-400 text-sm text-center py-2">No hay productos agregados aún</p>
                     </div>
+                </div>
+
+                <!-- Save button -->
+                <form id="inventory-form">
+                    <button type="submit" id="btn-save-purchase" disabled class="w-full bg-green-600 text-white font-bold py-3 rounded-lg hover:bg-green-700 transition disabled:bg-gray-300 disabled:cursor-not-allowed">
+                        <i class="fas fa-save mr-2"></i>Guardar Abastecimiento
+                    </button>
                 </form>
             </div>
         </section>
-
         <!-- Dashboard View -->
         <section id="view-dashboard" class="view-section hidden">
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8 text-center">
