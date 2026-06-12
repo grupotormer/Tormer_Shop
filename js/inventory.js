@@ -1,10 +1,12 @@
 /**
  * Inventory Module
  * Multi-product purchase registration + new product creation
+ * NOTE: 'Stock' in Productos is an AppSheet formula column (auto-calculated
+ * from sum of CantidadRestante in Compras) — never written via API.
  */
 const inventory = (function() {
     let products = [];
-    let purchaseItems = []; // List of items in current purchase transaction
+    let purchaseItems = [];
 
     async function init() {
         await loadProducts();
@@ -86,7 +88,6 @@ const inventory = (function() {
         }
 
         renderPurchaseItems();
-        // Reset item fields
         selectEl.value = '';
         document.getElementById('inv-quantity').value = '';
         document.getElementById('inv-cost').value = '';
@@ -137,23 +138,20 @@ const inventory = (function() {
             let realProductID = item.productID;
 
             if (item.isNew) {
-                // Create the new product first
+                // Create the new product (Stock is a formula column — do NOT send it)
                 realProductID = Math.random().toString(36).substr(2, 9).toUpperCase();
                 productosAdd.push({
                     ID: realProductID,
                     Nombre: item.productName,
                     CodigoBarras: item.newBarcode || '',
                     Categoria: item.newCategory || '',
-                    PrecioVenta: item.price,
-                    Stock: item.quantity
+                    PrecioVenta: item.price
                 });
             } else {
-                const product = products.find(p => p.ID === item.productID);
-                const currentStock = parseInt(product ? product.Stock : 0) || 0;
+                // Only update price — Stock is a formula column, never edit it
                 productosEdit.push({
                     ID: item.productID,
-                    PrecioVenta: item.price,
-                    Stock: currentStock + item.quantity
+                    PrecioVenta: item.price
                 });
             }
 
@@ -161,7 +159,7 @@ const inventory = (function() {
                 ID: Math.random().toString(36).substr(2, 9).toUpperCase(),
                 ProductoID: realProductID,
                 Cantidad: item.quantity,
-                CantidadRestante: item.quantity, // FIFO tracking
+                CantidadRestante: item.quantity, // FIFO tracking — feeds the Stock formula
                 Costo: item.cost,
                 PrecioVentaSugerido: item.price,
                 FechaVencimiento: item.expiry || '',
@@ -175,13 +173,13 @@ const inventory = (function() {
             if (!r) return;
         }
 
-        // 2. Update existing products stock
+        // 2. Update price on existing products
         if (productosEdit.length > 0) {
             const r = await api.editRecords('Productos', productosEdit);
             if (!r) return;
         }
 
-        // 3. Save purchase lots
+        // 3. Save purchase lots (this feeds Stock via formula)
         const r = await api.addRecords('Compras', comprasRows);
         if (r) {
             ui.showToast(`Abastecimiento guardado: ${purchaseItems.length} producto(s)`, 'success');
