@@ -225,8 +225,9 @@ const pos = (function() {
         const saleResult = await api.addRecords('Ventas', saleRows);
         if (!saleResult) return;
 
+        // Stock in Productos is a formula column (sum of CantidadRestante in Compras),
+        // so we only need to update the lots — Stock recalculates automatically.
         const lotUpdates = [];
-        const stockUpdates = [];
 
         for (const item of cart) {
             let remaining = item.quantity;
@@ -239,16 +240,9 @@ const pos = (function() {
                 lotUpdates.push({ ID: lot.ID, CantidadRestante: lotQty - consume });
                 remaining -= consume;
             }
-
-            const product = products.find(p => p.id === item.id);
-            stockUpdates.push({
-                ID: item.id,
-                Stock: Math.max(0, (product ? product.stock : 0) - item.quantity)
-            });
         }
 
         if (lotUpdates.length > 0) await api.editRecords('Compras', lotUpdates);
-        if (stockUpdates.length > 0) await api.editRecords('Productos', stockUpdates);
 
         ui.showToast('Venta procesada exitosamente', 'success');
         cart = [];
