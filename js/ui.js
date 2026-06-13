@@ -95,10 +95,40 @@ const ui = (function() {
         }
     }
 
+    /**
+     * Formats a date for AppSheet API (DD/MM/YYYY HH:mm:ss)
+     * @param {Date} date
+     */
+    function formatDateForAPI(date) {
+        if (!date) return '';
+        const d = new Date(date);
+        const pad = (n) => n.toString().padStart(2, '0');
+        return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+    }
+
+    /**
+     * Parses AppSheet date string (MM/DD/YYYY HH:mm:ss) to Date object.
+     * Note: AppSheet API consistently returns MM/DD/YYYY in 'Find' actions
+     * regardless of the locale sent in the 'Add' action.
+     * @param {string} dateStr
+     */
+    function parseAppSheetDate(dateStr) {
+        if (!dateStr) return null;
+        if (dateStr.includes('/')) {
+            const [datePart, timePart] = dateStr.split(' ');
+            const [m, d, y] = datePart.split('/');
+            const [hh, mm, ss] = (timePart || '00:00:00').split(':');
+            return new Date(y, m - 1, d, hh, mm, ss);
+        }
+        return new Date(dateStr);
+    }
+
     return {
         init,
         switchView,
         showToast,
-        showLoading
+        showLoading,
+        formatDateForAPI,
+        parseAppSheetDate
     };
 })();

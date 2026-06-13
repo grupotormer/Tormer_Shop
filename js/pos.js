@@ -211,7 +211,7 @@ const pos = (function() {
     async function processSale() {
         if (cart.length === 0) return;
 
-        const now = new Date().toISOString();
+        const now = ui.formatDateForAPI(new Date());
 
         const saleRows = cart.map(item => ({
             ID: Math.random().toString(36).substr(2, 9).toUpperCase(),
