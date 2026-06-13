@@ -22,10 +22,11 @@ const dashboard = (function() {
         let dayTotal = 0, monthTotal = 0;
 
         sales.forEach(s => {
-            const saleDate = s.Fecha ? s.Fecha.split('T')[0] : '';
+            const saleDateObj = ui.parseAppSheetDate(s.Fecha);
+            const saleDateStr = saleDateObj.toISOString().split('T')[0];
             const amount = parseFloat(s.Total) || 0;
-            if (saleDate === todayStr) dayTotal += amount;
-            if (saleDate.startsWith(monthStr)) monthTotal += amount;
+            if (saleDateStr === todayStr) dayTotal += amount;
+            if (saleDateStr.startsWith(monthStr)) monthTotal += amount;
         });
 
         document.getElementById('dash-sales-day').textContent = `$${dayTotal.toFixed(2)}`;
@@ -42,8 +43,10 @@ const dashboard = (function() {
         }).reverse();
 
         const totalsByDay = last7Days.map(date =>
-            sales.filter(s => s.Fecha && s.Fecha.startsWith(date))
-                 .reduce((sum, s) => sum + (parseFloat(s.Total) || 0), 0)
+            sales.filter(s => {
+                const saleDateObj = ui.parseAppSheetDate(s.Fecha);
+                return saleDateObj.toISOString().startsWith(date);
+            }).reduce((sum, s) => sum + (parseFloat(s.Total) || 0), 0)
         );
 
         if (salesChart) salesChart.destroy();
@@ -113,7 +116,17 @@ const dashboard = (function() {
         activeLots.forEach(p => {
             if (!p.FechaVencimiento) return;
 
-            const expiryDate = new Date(p.FechaVencimiento);
+            // FechaVencimiento comes from <input type="date"> which is YYYY-MM-DD
+            // However, AppSheet might return it as MM/DD/YYYY if it was stored via API
+            // Or YYYY-MM-DD if entered via AppSheet UI.
+            // We use a robust parsing approach.
+            let expiryDate;
+            if (p.FechaVencimiento.includes('/')) {
+                expiryDate = ui.parseAppSheetDate(p.FechaVencimiento);
+            } else {
+                expiryDate = new Date(p.FechaVencimiento + 'T00:00:00');
+            }
+
             const product = products.find(prod => prod.ID === p.ProductoID);
 
             let status = '', rowClass = '';

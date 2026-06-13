@@ -69,7 +69,7 @@ const api = (function() {
             const text = await response.text();
             const data = text ? JSON.parse(text) : [];
             debugLog(`✓ ${action} ${tableName} OK: ${JSON.stringify(data).substring(0, 300)}`);
-            return data;
+            return data.Rows || data;
 
         } catch (error) {
             if (error.name === 'AbortError') {

@@ -163,7 +163,7 @@ const inventory = (function() {
                 Costo: item.cost,
                 PrecioVentaSugerido: item.price,
                 FechaVencimiento: item.expiry || '',
-                FechaRegistro: new Date().toISOString()
+                FechaRegistro: ui.formatDateForAPI(new Date())
             });
         }
 
