@@ -21,6 +21,7 @@ const api = (function() {
         };
         try {
             ui.showLoading(true);
+            console.log(`API Request: ${action} on ${tableName}`, payload);
             const response = await fetch(url, {
                 method: 'POST',
                 headers: {
@@ -31,9 +32,12 @@ const api = (function() {
             });
             if (!response.ok) {
                 const errorData = await response.json();
+                console.error(`API Error Response (${action} on ${tableName}):`, errorData);
                 throw new Error(errorData.Message || `HTTP error! status: ${response.status}`);
             }
-            return await response.json();
+            const result = await response.json();
+            console.log(`API Response (${action} on ${tableName}):`, result);
+            return result;
         } catch (error) {
             console.error(`AppSheet API Error (${action} on ${tableName}):`, error);
             ui.showToast(`Error de API: ${error.message}`, 'error');

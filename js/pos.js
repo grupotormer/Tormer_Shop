@@ -10,32 +10,49 @@ const pos = (function() {
     const TAX_RATE = 0.13;
 
     async function loadProducts() {
-        const productData = await api.getRecords('Productos');
-        const salesData = await api.getRecords('Ventas');
-        if (!productData) return;
+        try {
+            console.log('Cargando productos y ventas...');
+            const productDataRaw = await api.getRecords('Productos');
+            const salesDataRaw = await api.getRecords('Ventas');
 
-        const popularityMap = {};
-        if (salesData) {
+            if (!productDataRaw) {
+                console.warn('No se recibieron datos de productos');
+                return;
+            }
+
+            // AppSheet sometimes wraps rows in a Rows property
+            const productData = Array.isArray(productDataRaw) ? productDataRaw : (productDataRaw.Rows || []);
+            const salesData = Array.isArray(salesDataRaw) ? salesDataRaw : (salesDataRaw.Rows || []);
+
+            console.log(`Productos cargados: ${productData.length}, Ventas cargadas: ${salesData.length}`);
+
+            const popularityMap = {};
             salesData.forEach(sale => {
                 const pid = sale.ProductoID;
-                popularityMap[pid] = (popularityMap[pid] || 0) + 1;
+                if (pid) {
+                    popularityMap[pid] = (popularityMap[pid] || 0) + 1;
+                }
             });
+
+            products = productData.map(p => ({
+                id: p.ID,
+                name: p.Nombre || 'Sin nombre',
+                barcode: p.CodigoBarras || '',
+                price: parseFloat(p.PrecioVenta) || 0,
+                stock: parseInt(p.Stock) || 0,
+                category: p.Categoria,
+                image: p.Imagen || 'https://via.placeholder.com/150?text=' + encodeURIComponent(p.Nombre || 'P'),
+                salesCount: popularityMap[p.ID] || 0
+            }));
+
+            products.sort((a, b) => b.salesCount - a.salesCount);
+            console.log('Grid de productos renderizado');
+            renderProductGrid(products);
+            updateSearchListener();
+        } catch (error) {
+            console.error('Error en loadProducts:', error);
+            ui.showToast('Error al cargar productos: ' + error.message, 'error');
         }
-
-        products = productData.map(p => ({
-            id: p.ID,
-            name: p.Nombre,
-            barcode: p.CodigoBarras || '',
-            price: parseFloat(p.PrecioVenta) || 0,
-            stock: parseInt(p.Stock) || 0,
-            category: p.Categoria,
-            image: p.Imagen || 'https://via.placeholder.com/150?text=' + encodeURIComponent(p.Nombre),
-            salesCount: popularityMap[p.ID] || 0
-        }));
-
-        products.sort((a, b) => b.salesCount - a.salesCount);
-        renderProductGrid(products);
-        updateSearchListener();
     }
 
     function renderProductGrid(productsToRender) {
@@ -201,11 +218,17 @@ const pos = (function() {
     }
 
     async function getFifoLots(productID) {
-        const allLots = await api.getRecords('Compras');
-        if (!allLots) return [];
+        const allLotsRaw = await api.getRecords('Compras');
+        if (!allLotsRaw) return [];
+        const allLots = Array.isArray(allLotsRaw) ? allLotsRaw : (allLotsRaw.Rows || []);
+
         return allLots
             .filter(l => l.ProductoID === productID && parseInt(l.CantidadRestante) > 0)
-            .sort((a, b) => new Date(a.FechaRegistro) - new Date(b.FechaRegistro));
+            .sort((a, b) => {
+                const dateA = ui.parseAppSheetDate(a.FechaRegistro) || new Date(0);
+                const dateB = ui.parseAppSheetDate(b.FechaRegistro) || new Date(0);
+                return dateA - dateB;
+            });
     }
 
     async function processSale() {
