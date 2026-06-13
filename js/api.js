@@ -92,27 +92,4 @@ const api = (function() {
         editRecords: (tableName, rows) => request(tableName, 'Edit', rows),
         deleteRecords: (tableName, rows) => request(tableName, 'Delete', rows)
     };
-})();                },
-                body: JSON.stringify(payload)
-            });
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.Message || `HTTP error! status: ${response.status}`);
-            }
-            return await response.json();
-        } catch (error) {
-            console.error(`AppSheet API Error (${action} on ${tableName}):`, error);
-            ui.showToast(`Error de API: ${error.message}`, 'error');
-            return null;
-        } finally {
-            ui.showLoading(false);
-        }
-    }
-
-    return {
-        getRecords: (tableName, selectors = []) => request(tableName, 'Find', selectors),
-        addRecords: (tableName, rows) => request(tableName, 'Add', rows),
-        editRecords: (tableName, rows) => request(tableName, 'Edit', rows),
-        deleteRecords: (tableName, rows) => request(tableName, 'Delete', rows)
-    };
 })();
