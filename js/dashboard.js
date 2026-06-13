@@ -22,7 +22,9 @@ const dashboard = (function() {
         let dayTotal = 0, monthTotal = 0;
 
         sales.forEach(s => {
-            const saleDate = s.Fecha ? s.Fecha.split('T')[0] : '';
+            const d = ui.parseAppSheetDate(s.Fecha);
+            if (!d) return;
+            const saleDate = d.toISOString().split('T')[0];
             const amount = parseFloat(s.Total) || 0;
             if (saleDate === todayStr) dayTotal += amount;
             if (saleDate.startsWith(monthStr)) monthTotal += amount;
@@ -42,8 +44,11 @@ const dashboard = (function() {
         }).reverse();
 
         const totalsByDay = last7Days.map(date =>
-            sales.filter(s => s.Fecha && s.Fecha.startsWith(date))
-                 .reduce((sum, s) => sum + (parseFloat(s.Total) || 0), 0)
+            sales.filter(s => {
+                const d = ui.parseAppSheetDate(s.Fecha);
+                return d && d.toISOString().startsWith(date);
+            })
+            .reduce((sum, s) => sum + (parseFloat(s.Total) || 0), 0)
         );
 
         if (salesChart) salesChart.destroy();
@@ -113,7 +118,8 @@ const dashboard = (function() {
         activeLots.forEach(p => {
             if (!p.FechaVencimiento) return;
 
-            const expiryDate = new Date(p.FechaVencimiento);
+            const expiryDate = ui.parseAppSheetDate(p.FechaVencimiento);
+            if (!expiryDate) return;
             const product = products.find(prod => prod.ID === p.ProductoID);
 
             let status = '', rowClass = '';

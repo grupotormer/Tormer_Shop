@@ -62,8 +62,14 @@ const inventory = (function() {
         const quantity = parseInt(document.getElementById('inv-quantity').value);
         const cost = parseFloat(document.getElementById('inv-cost').value);
         const price = parseFloat(document.getElementById('inv-price').value);
-        const expiry = document.getElementById('inv-expiry').value;
+        let expiry = document.getElementById('inv-expiry').value;
         const isNew = selectEl.value === '__NEW__';
+
+        // Format expiry date if present (YYYY-MM-DD -> DD/MM/YYYY)
+        if (expiry && expiry.includes('-')) {
+            const [y, m, d] = expiry.split('-');
+            expiry = `${d}/${m}/${y}`;
+        }
 
         if (!selectEl.value) { ui.showToast('Selecciona un producto', 'error'); return; }
         if (!quantity || quantity < 1) { ui.showToast('Ingresa una cantidad válida', 'error'); return; }
@@ -163,7 +169,7 @@ const inventory = (function() {
                 Costo: item.cost,
                 PrecioVentaSugerido: item.price,
                 FechaVencimiento: item.expiry || '',
-                FechaRegistro: new Date().toISOString()
+                FechaRegistro: ui.formatDateForAPI(new Date())
             });
         }
 
