@@ -211,43 +211,63 @@ const pos = (function() {
     async function processSale() {
         if (cart.length === 0) return;
 
-        const now = new Date().toISOString();
+        try {
+            const now = new Date().toISOString();
 
-        const saleRows = cart.map(item => ({
-            ID: Math.random().toString(36).substr(2, 9).toUpperCase(),
-            ProductoID: item.id,
-            Cantidad: item.quantity,
-            PrecioUnitario: item.price,
-            Total: parseFloat((item.price * item.quantity).toFixed(2)),
-            Fecha: now
-        }));
+            const saleRows = cart.map(item => ({
+                ID: Math.random().toString(36).substr(2, 9).toUpperCase(),
+                ProductoID: item.id,
+                Cantidad: item.quantity,
+                PrecioUnitario: item.price,
+                Total: parseFloat((item.price * item.quantity).toFixed(2)),
+                Fecha: now
+            }));
 
-        const saleResult = await api.addRecords('Ventas', saleRows);
-        if (!saleResult) return;
+            // 1. Get all relevant lots first to avoid repeated API calls
+            const allLots = await api.getRecords('Compras');
+            if (!allLots) throw new Error('No se pudo obtener la información de lotes');
 
-        // Stock in Productos is a formula column (sum of CantidadRestante in Compras),
-        // so we only need to update the lots — Stock recalculates automatically.
-        const lotUpdates = [];
+            const lotUpdates = [];
+            for (const item of cart) {
+                let remaining = item.quantity;
+                const itemLots = allLots
+                    .filter(l => l.ProductoID === item.id && parseInt(l.CantidadRestante) > 0)
+                    .sort((a, b) => new Date(a.FechaRegistro) - new Date(b.FechaRegistro));
 
-        for (const item of cart) {
-            let remaining = item.quantity;
-            const lots = await getFifoLots(item.id);
+                for (const lot of itemLots) {
+                    if (remaining <= 0) break;
+                    const lotQty = parseInt(lot.CantidadRestante) || 0;
+                    const consume = Math.min(lotQty, remaining);
+                    lotUpdates.push({ ID: lot.ID, CantidadRestante: lotQty - consume });
+                    remaining -= consume;
+                }
 
-            for (const lot of lots) {
-                if (remaining <= 0) break;
-                const lotQty = parseInt(lot.CantidadRestante) || 0;
-                const consume = Math.min(lotQty, remaining);
-                lotUpdates.push({ ID: lot.ID, CantidadRestante: lotQty - consume });
-                remaining -= consume;
+                if (remaining > 0) {
+                    throw new Error(`Stock insuficiente para ${item.name} en los lotes disponibles`);
+                }
             }
+
+            // 2. Register Sales
+            const saleResult = await api.addRecords('Ventas', saleRows);
+            if (!saleResult) throw new Error('Error al registrar la venta');
+
+            // 3. Update Lots
+            if (lotUpdates.length > 0) {
+                const updateResult = await api.editRecords('Compras', lotUpdates);
+                if (!updateResult) throw new Error('Error al actualizar inventario (lotes)');
+            }
+
+            ui.showToast('Venta procesada exitosamente', 'success');
+
+            // Success: clear cart and search
+            cart = [];
+            document.getElementById('product-search').value = '';
+            renderCart();
+            loadProducts();
+        } catch (error) {
+            console.error('Error en processSale:', error);
+            ui.showToast(error.message || 'Error al procesar la venta', 'error');
         }
-
-        if (lotUpdates.length > 0) await api.editRecords('Compras', lotUpdates);
-
-        ui.showToast('Venta procesada exitosamente', 'success');
-        cart = [];
-        renderCart();
-        loadProducts();
     }
 
     return {

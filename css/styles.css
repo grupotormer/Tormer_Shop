@@ -49,8 +49,12 @@
 }
 
 /* Toast animations */
+#toast {
+    opacity: 0;
+}
+
 .toast-show {
-    transform: translateY(0);
+    transform: translate(-50%, -50%) scale(1) !important;
     opacity: 1 !important;
 }
 /* Expiration colors */

@@ -7,6 +7,7 @@
 const inventory = (function() {
     let products = [];
     let purchaseItems = [];
+    let listenersAttached = false;
 
     async function init() {
         await loadProducts();
@@ -34,6 +35,8 @@ const inventory = (function() {
     }
 
     function setupForm() {
+        if (listenersAttached) return;
+
         const select = document.getElementById('inv-product-select');
         select.onchange = () => {
             const newProductFields = document.getElementById('new-product-fields');
@@ -55,6 +58,8 @@ const inventory = (function() {
             }
             await savePurchase();
         };
+
+        listenersAttached = true;
     }
 
     function addItemToList() {
@@ -88,11 +93,19 @@ const inventory = (function() {
         }
 
         renderPurchaseItems();
+
+        // Reset form fields
         selectEl.value = '';
         document.getElementById('inv-quantity').value = '';
         document.getElementById('inv-cost').value = '';
         document.getElementById('inv-price').value = '';
         document.getElementById('inv-expiry').value = '';
+
+        // Reset new product fields
+        document.getElementById('inv-new-name').value = '';
+        document.getElementById('inv-new-barcode').value = '';
+        document.getElementById('inv-new-category').value = '';
+
         document.getElementById('new-product-fields').classList.add('hidden');
         ui.showToast(`${productName} agregado a la lista`);
     }
