@@ -205,13 +205,13 @@ const pos = (function() {
         if (!allLots) return [];
         return allLots
             .filter(l => l.ProductoID === productID && parseInt(l.CantidadRestante) > 0)
-            .sort((a, b) => new Date(a.FechaRegistro) - new Date(b.FechaRegistro));
+            .sort((a, b) => ui.parseAppSheetDate(a.FechaRegistro) - ui.parseAppSheetDate(b.FechaRegistro));
     }
 
     async function processSale() {
         if (cart.length === 0) return;
 
-        const now = new Date().toISOString();
+        const now = ui.formatDateForAPI(new Date());
 
         const saleRows = cart.map(item => ({
             ID: Math.random().toString(36).substr(2, 9).toUpperCase(),
