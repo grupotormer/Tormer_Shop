@@ -9,8 +9,26 @@ const api = (function() {
         region: 'www'
     };
 
-    const getBaseUrl = (tableName) => 
+    const getBaseUrl = (tableName) =>
         `https://${CONFIG.region}.appsheet.com/api/v2/apps/${CONFIG.appId}/tables/${encodeURIComponent(tableName)}/Action`;
+
+    /**
+     * Visible on-screen debug log (useful on iPad where console isn't accessible)
+     */
+    function debugLog(message, isError = false) {
+        const panel = document.getElementById('debug-panel');
+        if (!panel) return;
+        panel.classList.remove('hidden');
+        const line = document.createElement('div');
+        line.className = isError ? 'text-red-400' : 'text-green-400';
+        line.style.whiteSpace = 'pre-wrap';
+        line.style.wordBreak = 'break-all';
+        line.style.borderBottom = '1px solid #444';
+        line.style.padding = '4px 0';
+        line.textContent = message;
+        panel.appendChild(line);
+        panel.scrollTop = panel.scrollHeight;
+    }
 
     async function request(tableName, action, rows = [], properties = {}) {
         const url = getBaseUrl(tableName);
@@ -19,14 +37,62 @@ const api = (function() {
             Properties: { Locale: 'es-ES', ...properties },
             Rows: rows
         };
+
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 20000);
+
         try {
             ui.showLoading(true);
+            debugLog(`→ ${action} ${tableName}: ${JSON.stringify(rows)}`);
+
             const response = await fetch(url, {
                 method: 'POST',
                 headers: {
                     'ApplicationAccessKey': CONFIG.accessKey,
                     'Content-Type': 'application/json'
                 },
+                body: JSON.stringify(payload),
+                signal: controller.signal
+            });
+
+            if (!response.ok) {
+                let message = `HTTP ${response.status}`;
+                try {
+                    const errorData = await response.json();
+                    message = errorData.Message || JSON.stringify(errorData);
+                } catch (_) {
+                    try { message = await response.text(); } catch (__) {}
+                }
+                throw new Error(message);
+            }
+
+            const text = await response.text();
+            const data = text ? JSON.parse(text) : [];
+            debugLog(`✓ ${action} ${tableName} OK: ${JSON.stringify(data).substring(0, 300)}`);
+            return data;
+
+        } catch (error) {
+            if (error.name === 'AbortError') {
+                debugLog(`✗ TIMEOUT ${action} ${tableName} (20s sin respuesta)`, true);
+                ui.showToast(`Tiempo agotado: ${action} en ${tableName}`, 'error');
+            } else {
+                debugLog(`✗ ERROR ${action} ${tableName}: ${error.message}`, true);
+                ui.showToast(`Error de API (${action} ${tableName}): ${error.message}`, 'error');
+            }
+            return null;
+        } finally {
+            clearTimeout(timeoutId);
+            ui.showLoading(false);
+        }
+    }
+
+    return {
+        getRecords: (tableName, selectors = []) => request(tableName, 'Find', selectors),
+        addRecords: (tableName, rows) => request(tableName, 'Add', rows),
+        editRecords: (tableName, rows) => request(tableName, 'Edit', rows),
+        deleteRecords: (tableName, rows) => request(tableName, 'Delete', rows)
+    };
+})();                },
                 body: JSON.stringify(payload)
             });
             if (!response.ok) {
