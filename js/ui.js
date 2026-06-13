@@ -3,7 +3,9 @@
  * Handles view switching, notifications, and loading states
  */
 const ui = (function() {
-    
+    let toastTimeout;
+    let toastHideTimeout;
+
     function init() {
         // Show initial view
         switchView('pos');
@@ -56,6 +58,10 @@ const ui = (function() {
         const icon = document.getElementById('toast-icon');
         const msg = document.getElementById('toast-message');
 
+        // Clear existing timeouts
+        clearTimeout(toastTimeout);
+        clearTimeout(toastHideTimeout);
+
         // Set colors based on type
         content.className = 'px-6 py-3 rounded-lg shadow-2xl text-white font-bold flex items-center ';
         if (type === 'success') {
@@ -73,12 +79,13 @@ const ui = (function() {
         
         // Show toast
         toast.classList.remove('hidden');
+        // Small delay to trigger transition
         setTimeout(() => toast.classList.add('toast-show'), 10);
 
         // Hide after 3 seconds
-        setTimeout(() => {
+        toastTimeout = setTimeout(() => {
             toast.classList.remove('toast-show');
-            setTimeout(() => toast.classList.add('hidden'), 300);
+            toastHideTimeout = setTimeout(() => toast.classList.add('hidden'), 300);
         }, 3000);
     }
 

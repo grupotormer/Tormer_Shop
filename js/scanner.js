@@ -28,6 +28,9 @@ const scanner = (function() {
                     const posView = document.getElementById('view-pos');
                     if (posView && !posView.classList.contains('hidden')) {
                         pos.addToCart(usbBuffer);
+                        // Clear search bar if it was being used
+                        const searchInput = document.getElementById('product-search');
+                        if (searchInput) searchInput.value = '';
                     }
                     usbBuffer = '';
                     e.preventDefault();
@@ -67,6 +70,9 @@ const scanner = (function() {
 
     function onScanSuccess(decodedText) {
         pos.addToCart(decodedText);
+        // Clear search bar if it was being used
+        const searchInput = document.getElementById('product-search');
+        if (searchInput) searchInput.value = '';
         if (navigator.vibrate) navigator.vibrate(100);
     }
 
