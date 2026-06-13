@@ -15,9 +15,9 @@ const inventory = (function() {
     }
 
     async function loadProducts() {
-        const data = await api.getRecords('Productos');
-        if (data) {
-            products = data;
+        const dataRaw = await api.getRecords('Productos');
+        if (dataRaw) {
+            products = Array.isArray(dataRaw) ? dataRaw : (dataRaw.Rows || []);
             renderProductSelect();
         }
     }

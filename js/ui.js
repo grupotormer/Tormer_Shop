@@ -107,20 +107,31 @@ const ui = (function() {
     }
 
     /**
-     * Parses AppSheet date string (MM/DD/YYYY HH:mm:ss) to Date object.
+     * Parses AppSheet date string (MM/DD/YYYY HH:mm:ss or DD/MM/YYYY HH:mm:ss) to Date object.
      * Note: AppSheet API consistently returns MM/DD/YYYY in 'Find' actions
-     * regardless of the locale sent in the 'Add' action.
+     * regardless of the locale sent in the 'Add' action, but we handle both for safety.
      * @param {string} dateStr
      */
     function parseAppSheetDate(dateStr) {
         if (!dateStr) return null;
+
+        // Handle format MM/DD/YYYY HH:mm:ss or DD/MM/YYYY HH:mm:ss
         if (dateStr.includes('/')) {
             const [datePart, timePart] = dateStr.split(' ');
-            const [m, d, y] = datePart.split('/');
+            const parts = datePart.split('/');
             const [hh, mm, ss] = (timePart || '00:00:00').split(':');
-            return new Date(y, m - 1, d, hh, mm, ss);
+
+            // Heuristic: If first part > 12, it must be DD/MM/YYYY
+            if (parseInt(parts[0]) > 12) {
+                return new Date(parts[2], parts[1] - 1, parts[0], hh, mm, ss);
+            }
+
+            // Otherwise, we assume MM/DD/YYYY as per AppSheet API behavior
+            return new Date(parts[2], parts[0] - 1, parts[1], hh, mm, ss);
         }
-        return new Date(dateStr);
+
+        const parsed = new Date(dateStr);
+        return isNaN(parsed.getTime()) ? null : parsed;
     }
 
     return {

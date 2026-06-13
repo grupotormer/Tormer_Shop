@@ -31,7 +31,14 @@ const api = (function() {
                 body: JSON.stringify(payload)
             });
             if (!response.ok) {
-                const errorData = await response.json();
+                let errorData;
+                try {
+                    errorData = await response.json();
+                } catch (e) {
+                    const text = await response.text();
+                    console.error(`API Error Response Text (${action} on ${tableName}):`, text);
+                    throw new Error(`HTTP error! status: ${response.status} - ${text}`);
+                }
                 console.error(`API Error Response (${action} on ${tableName}):`, errorData);
                 throw new Error(errorData.Message || `HTTP error! status: ${response.status}`);
             }

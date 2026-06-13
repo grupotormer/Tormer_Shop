@@ -7,9 +7,13 @@ const dashboard = (function() {
     let topProductsChart;
 
     async function init() {
-        const salesData = await api.getRecords('Ventas');
-        const productsData = await api.getRecords('Productos');
-        if (!salesData || !productsData) return;
+        const salesDataRaw = await api.getRecords('Ventas');
+        const productsDataRaw = await api.getRecords('Productos');
+        if (!salesDataRaw || !productsDataRaw) return;
+
+        const salesData = Array.isArray(salesDataRaw) ? salesDataRaw : (salesDataRaw.Rows || []);
+        const productsData = Array.isArray(productsDataRaw) ? productsDataRaw : (productsDataRaw.Rows || []);
+
         updateSummaryMetrics(salesData);
         renderSalesChart(salesData);
         renderTopProductsChart(salesData, productsData);
@@ -101,9 +105,12 @@ const dashboard = (function() {
      * Expiration Monitor — only shows lots with stock remaining (CantidadRestante > 0)
      */
     async function loadExpirations() {
-        const purchases = await api.getRecords('Compras');
-        const products = await api.getRecords('Productos');
-        if (!purchases || !products) return;
+        const purchasesRaw = await api.getRecords('Compras');
+        const productsRaw = await api.getRecords('Productos');
+        if (!purchasesRaw || !productsRaw) return;
+
+        const purchases = Array.isArray(purchasesRaw) ? purchasesRaw : (purchasesRaw.Rows || []);
+        const products = Array.isArray(productsRaw) ? productsRaw : (productsRaw.Rows || []);
 
         const tableBody = document.getElementById('expirations-table-body');
         tableBody.innerHTML = '';
