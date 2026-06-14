@@ -10,9 +10,9 @@ const scanner = (function() {
 
     function initUsbScanner() {
         document.addEventListener('keydown', (e) => {
-            // Ignore if user is typing in an input/textarea (except the search bar)
+            // Ignore if user is typing in an input/textarea (except the search bars)
             const tag = document.activeElement.tagName;
-            const isSearchBar = document.activeElement.id === 'product-search';
+            const isSearchBar = document.activeElement.id === 'product-search' || document.activeElement.id === 'cons-product-search';
             const isTyping = (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') && !isSearchBar;
             if (isTyping) return;
 
@@ -24,11 +24,16 @@ const scanner = (function() {
 
             if (e.key === 'Enter') {
                 if (usbBuffer.length > 2) {
-                    // Only trigger if POS view is active
+                    // Only trigger if POS or Consumption view is active
                     const posView = document.getElementById('view-pos');
+                    const consView = document.getElementById('view-consumption');
+
                     if (posView && !posView.classList.contains('hidden')) {
                         pos.addToCart(usbBuffer);
+                    } else if (consView && !consView.classList.contains('hidden')) {
+                        consumption.addToCart(usbBuffer);
                     }
+
                     usbBuffer = '';
                     e.preventDefault();
                 }
@@ -41,10 +46,16 @@ const scanner = (function() {
     }
 
     async function start() {
-        const container = document.getElementById('scanner-container');
+        const consView = document.getElementById('view-consumption');
+        const isCons = consView && !consView.classList.contains('hidden');
+
+        const containerId = isCons ? 'cons-scanner-container' : 'scanner-container';
+        const interactiveId = isCons ? 'cons-interactive' : 'interactive';
+
+        const container = document.getElementById(containerId);
         container.classList.remove('hidden');
 
-        html5QrCode = new Html5Qrcode("interactive");
+        html5QrCode = new Html5Qrcode(interactiveId);
         const config = { fps: 10, qrbox: { width: 250, height: 150 } };
 
         try {
@@ -61,12 +72,21 @@ const scanner = (function() {
         if (html5QrCode && isScanning) {
             await html5QrCode.stop();
             document.getElementById('scanner-container').classList.add('hidden');
+            document.getElementById('cons-scanner-container').classList.add('hidden');
             isScanning = false;
         }
     }
 
     function onScanSuccess(decodedText) {
-        pos.addToCart(decodedText);
+        const consView = document.getElementById('view-consumption');
+        const isCons = consView && !consView.classList.contains('hidden');
+
+        if (isCons) {
+            consumption.addToCart(decodedText);
+        } else {
+            pos.addToCart(decodedText);
+        }
+
         if (navigator.vibrate) navigator.vibrate(100);
     }
 
