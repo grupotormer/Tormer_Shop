@@ -211,11 +211,13 @@ const pos = (function() {
     async function processSale() {
         if (cart.length === 0) return;
 
+        const customerName = document.getElementById('pos-customer-name').value || 'Clientes varios';
         const now = ui.formatDateForAPI(new Date());
 
         const saleRows = cart.map(item => ({
             ID: Math.random().toString(36).substr(2, 9).toUpperCase(),
             ProductoID: item.id,
+            Cliente: customerName,
             Cantidad: item.quantity,
             PrecioUnitario: item.price,
             Total: parseFloat((item.price * item.quantity).toFixed(2)),
@@ -245,6 +247,7 @@ const pos = (function() {
         if (lotUpdates.length > 0) await api.editRecords('Compras', lotUpdates);
 
         ui.showToast('Venta procesada exitosamente', 'success');
+        document.getElementById('pos-customer-name').value = 'Clientes varios';
         cart = [];
         renderCart();
         loadProducts();
