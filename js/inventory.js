@@ -59,7 +59,7 @@ const inventory = (function() {
 
     function addItemToList() {
         const selectEl = document.getElementById('inv-product-select');
-        const quantity = parseInt(document.getElementById('inv-quantity').value);
+        const quantity = parseFloat(document.getElementById('inv-quantity').value);
         const cost = parseFloat(document.getElementById('inv-cost').value);
         const price = parseFloat(document.getElementById('inv-price').value);
         const expiry = document.getElementById('inv-expiry').value;
