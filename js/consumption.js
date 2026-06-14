@@ -11,17 +11,22 @@ const consumption = (function() {
         const productData = await api.getRecords('Productos');
         const purchaseData = await api.getRecords('Compras');
         const salesData = await api.getRecords('Ventas');
+        const internalConsumptionData = await api.getRecords('Consumo_interno');
 
         if (!productData) return;
 
         const popularityMap = {};
-        if (salesData) {
-            const salesArray = Array.isArray(salesData) ? salesData : (salesData.Rows || []);
-            salesArray.forEach(sale => {
-                const pid = sale.ProductoID;
+        const countUsage = (data) => {
+            if (!data) return;
+            const rows = Array.isArray(data) ? data : (data.Rows || []);
+            rows.forEach(r => {
+                const pid = r.ProductoID;
                 popularityMap[pid] = (popularityMap[pid] || 0) + 1;
             });
-        }
+        };
+
+        countUsage(salesData);
+        countUsage(internalConsumptionData);
 
         // Map product ID to its oldest available lot cost
         const costMap = {};
@@ -31,8 +36,9 @@ const consumption = (function() {
             sortedPurchases.sort((a, b) => ui.parseAppSheetDate(a.FechaRegistro) - ui.parseAppSheetDate(b.FechaRegistro));
 
             const productsArray = Array.isArray(productData) ? productData : (productData.Rows || []);
+            const EPSILON = 0.0001;
             productsArray.forEach(p => {
-                const oldestLot = sortedPurchases.find(l => l.ProductoID === p.ID && parseFloat(l.CantidadRestante) > 0);
+                const oldestLot = sortedPurchases.find(l => l.ProductoID === p.ID && parseFloat(l.CantidadRestante) > EPSILON);
                 costMap[p.ID] = oldestLot ? parseFloat(oldestLot.Costo) : 0;
             });
         }
@@ -43,7 +49,7 @@ const consumption = (function() {
             name: p.Nombre,
             barcode: p.CodigoBarras || '',
             cost: costMap[p.ID] || 0,
-            stock: parseInt(p.Stock) || 0,
+            stock: parseFloat(p.Stock) || 0,
             category: p.Categoria,
             image: p.Imagen || 'https://via.placeholder.com/150?text=' + encodeURIComponent(p.Nombre),
             salesCount: popularityMap[p.ID] || 0
@@ -122,7 +128,7 @@ const consumption = (function() {
     function setQuantity(productId, value) {
         const item = cart.find(i => i.id === productId);
         if (item) {
-            const newQty = parseInt(value) || 0;
+            const newQty = parseFloat(value) || 0;
             if (newQty <= 0) { removeFromCart(productId); return; }
             if (newQty > item.stock) {
                 ui.showToast(`Stock máximo: ${item.stock}`, 'error');
@@ -202,24 +208,25 @@ const consumption = (function() {
         if (!allLotsData) return;
         const allLots = Array.isArray(allLotsData) ? allLotsData : (allLotsData.Rows || []);
 
-        const saleRows = [];
+        const consumptionRows = [];
         const lotUpdates = [];
 
         for (const item of cart) {
             let remaining = item.quantity;
+            const EPSILON = 0.0001;
 
             // Filter and sort lots for the current product
             const lots = allLots
-                .filter(l => l.ProductoID === item.id && parseFloat(l.CantidadRestante) > 0)
+                .filter(l => l.ProductoID === item.id && parseFloat(l.CantidadRestante) > EPSILON)
                 .sort((a, b) => ui.parseAppSheetDate(a.FechaRegistro) - ui.parseAppSheetDate(b.FechaRegistro));
 
             for (const lot of lots) {
-                if (remaining <= 0) break;
+                if (remaining <= EPSILON) break;
                 const lotQty = parseFloat(lot.CantidadRestante) || 0;
                 const consume = Math.min(lotQty, remaining);
                 const itemCost = parseFloat(lot.Costo) || 0;
 
-                saleRows.push({
+                consumptionRows.push({
                     ID: Math.random().toString(36).substr(2, 9).toUpperCase(),
                     ProductoID: item.id,
                     Cliente: responsible,
@@ -229,14 +236,17 @@ const consumption = (function() {
                     Fecha: now
                 });
 
-                lotUpdates.push({ ID: lot.ID, CantidadRestante: lotQty - consume });
+                lotUpdates.push({
+                    ID: lot.ID,
+                    CantidadRestante: parseFloat((lotQty - consume).toFixed(4))
+                });
                 remaining -= consume;
             }
         }
 
-        if (saleRows.length === 0) return;
+        if (consumptionRows.length === 0) return;
 
-        const saleResult = await api.addRecords('Ventas', saleRows);
+        const result = await api.addRecords('Consumo_interno', consumptionRows);
         if (!saleResult) return;
 
         if (lotUpdates.length > 0) await api.editRecords('Compras', lotUpdates);

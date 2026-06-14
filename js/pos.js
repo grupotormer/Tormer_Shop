@@ -27,7 +27,7 @@ const pos = (function() {
             name: p.Nombre,
             barcode: p.CodigoBarras || '',
             price: parseFloat(p.PrecioVenta) || 0,
-            stock: parseInt(p.Stock) || 0,
+            stock: parseFloat(p.Stock) || 0,
             category: p.Categoria,
             image: p.Imagen || 'https://via.placeholder.com/150?text=' + encodeURIComponent(p.Nombre),
             salesCount: popularityMap[p.ID] || 0
@@ -106,7 +106,7 @@ const pos = (function() {
     function setQuantity(productId, value) {
         const item = cart.find(i => i.id === productId);
         if (item) {
-            const newQty = parseInt(value) || 0;
+            const newQty = parseFloat(value) || 0;
             if (newQty <= 0) { removeFromCart(productId); return; }
             if (newQty > item.stock) {
                 ui.showToast(`Stock máximo: ${item.stock}`, 'error');
@@ -203,8 +203,9 @@ const pos = (function() {
     async function getFifoLots(productID) {
         const allLots = await api.getRecords('Compras');
         if (!allLots) return [];
+        const EPSILON = 0.0001;
         return allLots
-            .filter(l => l.ProductoID === productID && parseInt(l.CantidadRestante) > 0)
+            .filter(l => l.ProductoID === productID && parseFloat(l.CantidadRestante) > EPSILON)
             .sort((a, b) => ui.parseAppSheetDate(a.FechaRegistro) - ui.parseAppSheetDate(b.FechaRegistro));
     }
 
@@ -233,13 +234,17 @@ const pos = (function() {
 
         for (const item of cart) {
             let remaining = item.quantity;
+            const EPSILON = 0.0001;
             const lots = await getFifoLots(item.id);
 
             for (const lot of lots) {
-                if (remaining <= 0) break;
-                const lotQty = parseInt(lot.CantidadRestante) || 0;
+                if (remaining <= EPSILON) break;
+                const lotQty = parseFloat(lot.CantidadRestante) || 0;
                 const consume = Math.min(lotQty, remaining);
-                lotUpdates.push({ ID: lot.ID, CantidadRestante: lotQty - consume });
+                lotUpdates.push({
+                    ID: lot.ID,
+                    CantidadRestante: parseFloat((lotQty - consume).toFixed(4))
+                });
                 remaining -= consume;
             }
         }
