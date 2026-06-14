@@ -175,7 +175,7 @@ const pos = (function() {
                         <input
                             type="number"
                             min="0"
-                            step="0.01"
+                            step="any"
                             value="${item.price.toFixed(2)}"
                             onchange="pos.setPrice('${item.id}', this.value)"
                             class="w-20 text-center text-sm font-bold text-blue-600 border border-gray-300 rounded p-1 focus:ring-1 focus:ring-blue-400 outline-none"
