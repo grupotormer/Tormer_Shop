@@ -202,7 +202,7 @@ const consumption = (function() {
         if (!allLotsData) return;
         const allLots = Array.isArray(allLotsData) ? allLotsData : (allLotsData.Rows || []);
 
-        const saleRows = [];
+        const consumptionRows = [];
         const lotUpdates = [];
 
         for (const item of cart) {
@@ -219,7 +219,7 @@ const consumption = (function() {
                 const consume = Math.min(lotQty, remaining);
                 const itemCost = parseFloat(lot.Costo) || 0;
 
-                saleRows.push({
+                consumptionRows.push({
                     ID: Math.random().toString(36).substr(2, 9).toUpperCase(),
                     ProductoID: item.id,
                     Cliente: responsible,
@@ -234,10 +234,10 @@ const consumption = (function() {
             }
         }
 
-        if (saleRows.length === 0) return;
+        if (consumptionRows.length === 0) return;
 
-        const saleResult = await api.addRecords('Ventas', saleRows);
-        if (!saleResult) return;
+        const consumptionResult = await api.addRecords('Consumo_interno', consumptionRows);
+        if (!consumptionResult) return;
 
         if (lotUpdates.length > 0) await api.editRecords('Compras', lotUpdates);
 
