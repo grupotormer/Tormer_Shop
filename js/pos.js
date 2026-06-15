@@ -16,13 +16,15 @@ const pos = (function() {
 
         const popularityMap = {};
         if (salesData) {
-            salesData.forEach(sale => {
-                const pid = sale.ProductoID;
+            const salesRows = Array.isArray(salesData) ? salesData : (salesData.Rows || []);
+            salesRows.forEach(sale => {
+                const pid = String(sale.ProductoID).trim();
                 popularityMap[pid] = (popularityMap[pid] || 0) + 1;
             });
         }
 
-        products = productData.map(p => ({
+        const productsArray = Array.isArray(productData) ? productData : (productData.Rows || []);
+        products = productsArray.map(p => ({
             id: p.ID,
             name: p.Nombre,
             barcode: p.CodigoBarras || '',
@@ -201,11 +203,12 @@ const pos = (function() {
     }
 
     async function getFifoLots(productID) {
-        const allLots = await api.getRecords('Compras');
-        if (!allLots) return [];
+        const allLotsData = await api.getRecords('Compras');
+        if (!allLotsData) return [];
+        const allLots = Array.isArray(allLotsData) ? allLotsData : (allLotsData.Rows || []);
         const EPSILON = 0.0001;
         return allLots
-            .filter(l => l.ProductoID === productID && parseFloat(l.CantidadRestante) > EPSILON)
+            .filter(l => String(l.ProductoID).trim() === String(productID).trim() && parseFloat(l.CantidadRestante) > EPSILON)
             .sort((a, b) => ui.parseAppSheetDate(a.FechaRegistro) - ui.parseAppSheetDate(b.FechaRegistro));
     }
 

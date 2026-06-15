@@ -20,7 +20,7 @@ const consumption = (function() {
             if (!data) return;
             const rows = Array.isArray(data) ? data : (data.Rows || []);
             rows.forEach(r => {
-                const pid = r.ProductoID;
+                const pid = String(r.ProductoID).trim();
                 popularityMap[pid] = (popularityMap[pid] || 0) + 1;
             });
         };
@@ -38,7 +38,7 @@ const consumption = (function() {
             const productsArray = Array.isArray(productData) ? productData : (productData.Rows || []);
             const EPSILON = 0.0001;
             productsArray.forEach(p => {
-                const oldestLot = sortedPurchases.find(l => l.ProductoID === p.ID && parseFloat(l.CantidadRestante) > EPSILON);
+                const oldestLot = sortedPurchases.find(l => String(l.ProductoID).trim() === String(p.ID).trim() && parseFloat(l.CantidadRestante) > EPSILON);
                 costMap[p.ID] = oldestLot ? parseFloat(oldestLot.Costo) : 0;
             });
         }
@@ -217,7 +217,7 @@ const consumption = (function() {
 
             // Filter and sort lots for the current product
             const lots = allLots
-                .filter(l => l.ProductoID === item.id && parseFloat(l.CantidadRestante) > EPSILON)
+                .filter(l => String(l.ProductoID).trim() === String(item.id).trim() && parseFloat(l.CantidadRestante) > EPSILON)
                 .sort((a, b) => ui.parseAppSheetDate(a.FechaRegistro) - ui.parseAppSheetDate(b.FechaRegistro));
 
             for (const lot of lots) {
@@ -241,6 +241,20 @@ const consumption = (function() {
                     CantidadRestante: parseFloat((lotQty - consume).toFixed(4))
                 });
                 remaining -= consume;
+            }
+
+            // If there's still quantity to consume but no more lots (or no lots at all),
+            // record the consumption anyway with cost 0 (or product cost if known)
+            if (remaining > EPSILON) {
+                consumptionRows.push({
+                    ID: Math.random().toString(36).substr(2, 9).toUpperCase(),
+                    ProductoID: item.id,
+                    Cliente: responsible,
+                    Cantidad: remaining,
+                    PrecioUnitario: item.cost || 0,
+                    Total: parseFloat(((item.cost || 0) * remaining).toFixed(2)),
+                    Fecha: now
+                });
             }
         }
 

@@ -66,9 +66,9 @@ const inventory = (function() {
         const isNew = selectEl.value === '__NEW__';
 
         if (!selectEl.value) { ui.showToast('Selecciona un producto', 'error'); return; }
-        if (!quantity || quantity < 1) { ui.showToast('Ingresa una cantidad válida', 'error'); return; }
-        if (!cost || cost <= 0) { ui.showToast('Ingresa un costo válido', 'error'); return; }
-        if (!price || price <= 0) { ui.showToast('Ingresa un precio válido', 'error'); return; }
+        if (isNaN(quantity) || quantity <= 0) { ui.showToast('Ingresa una cantidad válida', 'error'); return; }
+        if (isNaN(cost) || cost < 0) { ui.showToast('Ingresa un costo válido', 'error'); return; }
+        if (isNaN(price) || price < 0) { ui.showToast('Ingresa un precio válido', 'error'); return; }
 
         let productName, productID;
 
