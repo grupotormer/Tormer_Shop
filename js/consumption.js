@@ -247,7 +247,7 @@ const consumption = (function() {
         if (consumptionRows.length === 0) return;
 
         const result = await api.addRecords('Consumo_interno', consumptionRows);
-        if (!saleResult) return;
+        if (!result) return;
 
         if (lotUpdates.length > 0) await api.editRecords('Compras', lotUpdates);
 
