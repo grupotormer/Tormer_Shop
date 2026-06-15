@@ -38,7 +38,7 @@ const consumption = (function() {
             const productsArray = Array.isArray(productData) ? productData : (productData.Rows || []);
             const EPSILON = 0.0001;
             productsArray.forEach(p => {
-                const oldestLot = sortedPurchases.find(l => l.ProductoID === p.ID && parseFloat(l.CantidadRestante) > EPSILON);
+                const oldestLot = sortedPurchases.find(l => String(l.ProductoID).trim() === String(p.ID).trim() && parseFloat(l.CantidadRestante) > EPSILON);
                 costMap[p.ID] = oldestLot ? parseFloat(oldestLot.Costo) : 0;
             });
         }
@@ -217,8 +217,13 @@ const consumption = (function() {
 
             // Filter and sort lots for the current product
             const lots = allLots
-                .filter(l => l.ProductoID === item.id && parseFloat(l.CantidadRestante) > EPSILON)
+                .filter(l => String(l.ProductoID).trim() === String(item.id).trim() && parseFloat(l.CantidadRestante) > EPSILON)
                 .sort((a, b) => ui.parseAppSheetDate(a.FechaRegistro) - ui.parseAppSheetDate(b.FechaRegistro));
+
+            if (lots.length === 0) {
+                ui.showToast(`No se encontraron lotes con stock para: ${item.name}`, 'error');
+                continue;
+            }
 
             for (const lot of lots) {
                 if (remaining <= EPSILON) break;
