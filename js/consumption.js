@@ -68,8 +68,7 @@ const consumption = (function() {
             card.className = 'product-card bg-white p-3 rounded-lg shadow cursor-pointer flex flex-col items-center text-center';
             card.onclick = () => addToCart(product.id);
             card.innerHTML = `
-                <img src="${product.image}" alt="${product.name}" class="w-24 h-24 object-cover mb-2 rounded">
-                <h3 class="text-sm font-bold text-gray-800 line-clamp-2 h-10">${product.name}</h3>
+                <div class="text-lg font-bold text-gray-800 line-clamp-3 h-24 flex items-center justify-center mb-2 px-2 uppercase">${product.name}</div>
                 <p class="text-orange-600 font-bold mt-1">$${product.cost.toFixed(2)}</p>
                 <p class="text-xs text-gray-500">Stock: ${product.stock}</p>
             `;
