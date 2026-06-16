@@ -16,18 +16,12 @@ const api = (function() {
      * Visible on-screen debug log (useful on iPad where console isn't accessible)
      */
     function debugLog(message, isError = false) {
-        const panel = document.getElementById('debug-panel');
-        if (!panel) return;
-        panel.classList.remove('hidden');
-        const line = document.createElement('div');
-        line.className = isError ? 'text-red-400' : 'text-green-400';
-        line.style.whiteSpace = 'pre-wrap';
-        line.style.wordBreak = 'break-all';
-        line.style.borderBottom = '1px solid #444';
-        line.style.padding = '4px 0';
-        line.textContent = message;
-        panel.appendChild(line);
-        panel.scrollTop = panel.scrollHeight;
+        // Log to console instead of screen
+        if (isError) {
+            console.error(`[API DEBUG] ${message}`);
+        } else {
+            console.log(`[API DEBUG] ${message}`);
+        }
     }
 
     async function request(tableName, action, rows = [], properties = {}) {
