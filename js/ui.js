@@ -37,6 +37,9 @@ const ui = (function() {
             case 'consumption':
                 consumption.loadProducts();
                 break;
+            case 'discharges':
+                discharges.loadProducts();
+                break;
             case 'inventory':
                 inventory.init();
                 break;
