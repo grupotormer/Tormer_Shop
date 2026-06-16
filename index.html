@@ -21,6 +21,7 @@
                     <div class="hidden md:flex space-x-4">
                         <button onclick="ui.switchView('pos')" class="hover:bg-blue-700 px-3 py-2 rounded transition">POS</button>
                         <button onclick="ui.switchView('consumption')" class="hover:bg-blue-700 px-3 py-2 rounded transition">Consumo</button>
+                        <button onclick="ui.switchView('discharges')" class="hover:bg-blue-700 px-3 py-2 rounded transition">Descargo</button>
                         <button onclick="ui.switchView('inventory')" class="hover:bg-blue-700 px-3 py-2 rounded transition">Abastecimiento</button>
                         <button onclick="ui.switchView('dashboard')" class="hover:bg-blue-700 px-3 py-2 rounded transition">Dashboard</button>
                         <button onclick="ui.switchView('expirations')" class="hover:bg-blue-700 px-3 py-2 rounded transition">Vencimientos</button>
@@ -37,6 +38,7 @@
         <div id="mobile-menu" class="hidden md:hidden bg-blue-700 px-4 pt-2 pb-3 space-y-1">
             <button onclick="ui.switchView('pos')" class="block w-full text-left px-3 py-2 rounded hover:bg-blue-800">POS</button>
             <button onclick="ui.switchView('consumption')" class="block w-full text-left px-3 py-2 rounded hover:bg-blue-800">Consumo</button>
+            <button onclick="ui.switchView('discharges')" class="block w-full text-left px-3 py-2 rounded hover:bg-blue-800">Descargo</button>
             <button onclick="ui.switchView('inventory')" class="block w-full text-left px-3 py-2 rounded hover:bg-blue-800">Abastecimiento</button>
             <button onclick="ui.switchView('dashboard')" class="block w-full text-left px-3 py-2 rounded hover:bg-blue-800">Dashboard</button>
             <button onclick="ui.switchView('expirations')" class="block w-full text-left px-3 py-2 rounded hover:bg-blue-800">Vencimientos</button>
@@ -100,6 +102,71 @@
                         </div>
                         <button id="btn-process-sale" onclick="pos.processSale()" class="w-full bg-green-500 text-white font-bold py-3 rounded-lg hover:bg-green-600 transition shadow-md mt-4 disabled:bg-gray-400 disabled:cursor-not-allowed">
                             PROCESAR VENTA
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Discharges View -->
+        <section id="view-discharges" class="view-section hidden">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- Product Catalog & Search -->
+                <div class="lg:col-span-2 space-y-4">
+                    <div class="bg-white p-4 rounded-lg shadow flex flex-col md:flex-row space-y-2 md:space-y-0 md:space-x-4 items-center">
+                        <div class="relative flex-grow w-full">
+                            <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-500">
+                                <i class="fas fa-search"></i>
+                            </span>
+                            <input type="text" id="dis-product-search" placeholder="Buscar producto para descargo..." class="pl-10 w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 outline-none">
+                        </div>
+                        <button onclick="scanner.start()" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition flex items-center shrink-0">
+                            <i class="fas fa-barcode mr-2"></i> Escanear
+                        </button>
+                    </div>
+
+                    <!-- Scanner Container (Hidden by default) -->
+                    <div id="dis-scanner-container" class="hidden bg-white p-4 rounded-lg shadow relative">
+                        <button onclick="scanner.stop()" class="absolute top-2 right-2 text-red-500 z-10"><i class="fas fa-times-circle text-2xl"></i></button>
+                        <div id="dis-interactive" class="w-full"></div>
+                    </div>
+
+                    <!-- Product Grid -->
+                    <div id="dis-product-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 overflow-y-auto" style="max-height: 70vh;">
+                        <!-- Products will be injected here -->
+                    </div>
+                </div>
+
+                <!-- Shopping Cart -->
+                <div class="bg-white p-4 rounded-lg shadow flex flex-col h-fit sticky top-20">
+                    <h2 class="text-xl font-bold mb-4 border-b pb-2"><i class="fas fa-trash-alt mr-2 text-blue-600"></i>Descargo de Inventario</h2>
+                    <div id="dis-cart-items" class="flex-grow space-y-3 mb-4 overflow-y-auto" style="max-height: 40vh;">
+                        <!-- Cart items will be injected here -->
+                        <p class="text-gray-500 text-center py-4">La lista está vacía</p>
+                    </div>
+                    <div class="border-t pt-4 space-y-2">
+                        <div>
+                            <label class="block text-xs font-bold text-gray-500 uppercase">Responsable *</label>
+                            <input type="text" id="dis-responsible" placeholder="Nombre de quien realiza" class="w-full p-2 border rounded text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-500 uppercase">Centro</label>
+                            <input type="text" id="dis-center" value="TS01" readonly class="w-full p-2 border rounded text-sm bg-gray-50 text-gray-500 outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-500 uppercase">Motivo (Texto de cabecera)</label>
+                            <select id="dis-reason" class="w-full p-2 border rounded text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+                                <option value="Producto vencido">Producto vencido</option>
+                                <option value="Producto explotado">Producto explotado</option>
+                                <option value="Producto no apto para consumo">Producto no apto para consumo</option>
+                            </select>
+                        </div>
+                        <div class="flex justify-between text-xl font-bold text-blue-700 mt-4">
+                            <span>Total (Costo):</span>
+                            <span id="dis-cart-total">$0.00</span>
+                        </div>
+                        <button id="btn-process-discards" onclick="discharges.processDiscards()" class="w-full bg-red-500 text-white font-bold py-3 rounded-lg hover:bg-red-600 transition shadow-md mt-4 disabled:bg-gray-400 disabled:cursor-not-allowed">
+                            PROCESAR DESCARGO
                         </button>
                     </div>
                 </div>
@@ -318,6 +385,7 @@
     <script src="js/api.js"></script>
     <script src="js/pos.js"></script>
     <script src="js/consumption.js"></script>
+    <script src="js/discharges.js"></script>
     <script src="js/inventory.js"></script>
     <script src="js/dashboard.js"></script>
     <script src="js/scanner.js"></script>

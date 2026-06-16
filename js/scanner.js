@@ -12,7 +12,7 @@ const scanner = (function() {
         document.addEventListener('keydown', (e) => {
             // Ignore if user is typing in an input/textarea (except the search bars)
             const tag = document.activeElement.tagName;
-            const isSearchBar = document.activeElement.id === 'product-search' || document.activeElement.id === 'cons-product-search';
+            const isSearchBar = document.activeElement.id === 'product-search' || document.activeElement.id === 'cons-product-search' || document.activeElement.id === 'dis-product-search';
             const isTyping = (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') && !isSearchBar;
             if (isTyping) return;
 
@@ -27,11 +27,14 @@ const scanner = (function() {
                     // Only trigger if POS or Consumption view is active
                     const posView = document.getElementById('view-pos');
                     const consView = document.getElementById('view-consumption');
+                    const discView = document.getElementById('view-discharges');
 
                     if (posView && !posView.classList.contains('hidden')) {
                         pos.addToCart(usbBuffer);
                     } else if (consView && !consView.classList.contains('hidden')) {
                         consumption.addToCart(usbBuffer);
+                    } else if (discView && !discView.classList.contains('hidden')) {
+                        discharges.addToCart(usbBuffer);
                     }
 
                     usbBuffer = '';
@@ -47,10 +50,20 @@ const scanner = (function() {
 
     async function start() {
         const consView = document.getElementById('view-consumption');
+        const discView = document.getElementById('view-discharges');
         const isCons = consView && !consView.classList.contains('hidden');
+        const isDisc = discView && !discView.classList.contains('hidden');
 
-        const containerId = isCons ? 'cons-scanner-container' : 'scanner-container';
-        const interactiveId = isCons ? 'cons-interactive' : 'interactive';
+        let containerId = 'scanner-container';
+        let interactiveId = 'interactive';
+
+        if (isCons) {
+            containerId = 'cons-scanner-container';
+            interactiveId = 'cons-interactive';
+        } else if (isDisc) {
+            containerId = 'dis-scanner-container';
+            interactiveId = 'dis-interactive';
+        }
 
         const container = document.getElementById(containerId);
         container.classList.remove('hidden');
@@ -73,16 +86,21 @@ const scanner = (function() {
             await html5QrCode.stop();
             document.getElementById('scanner-container').classList.add('hidden');
             document.getElementById('cons-scanner-container').classList.add('hidden');
+            document.getElementById('dis-scanner-container').classList.add('hidden');
             isScanning = false;
         }
     }
 
     function onScanSuccess(decodedText) {
         const consView = document.getElementById('view-consumption');
+        const discView = document.getElementById('view-discharges');
         const isCons = consView && !consView.classList.contains('hidden');
+        const isDisc = discView && !discView.classList.contains('hidden');
 
         if (isCons) {
             consumption.addToCart(decodedText);
+        } else if (isDisc) {
+            discharges.addToCart(decodedText);
         } else {
             pos.addToCart(decodedText);
         }
