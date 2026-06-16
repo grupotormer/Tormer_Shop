@@ -91,16 +91,10 @@ const consumption = (function() {
     function addToCart(productIdOrBarcode) {
         const product = products.find(p => p.id === productIdOrBarcode || p.barcode === productIdOrBarcode);
         if (!product) { ui.showToast('Producto no encontrado', 'error'); return; }
-        if (product.stock <= 0) { ui.showToast('Producto sin stock', 'error'); return; }
 
         const cartItem = cart.find(item => item.id === product.id);
         if (cartItem) {
-            if (cartItem.quantity < product.stock) {
-                cartItem.quantity++;
-            } else {
-                ui.showToast('No hay suficiente stock disponible', 'error');
-                return;
-            }
+            cartItem.quantity++;
         } else {
             cart.push({ ...product, quantity: 1 });
         }
@@ -118,7 +112,6 @@ const consumption = (function() {
         if (item) {
             const newQty = item.quantity + delta;
             if (newQty <= 0) { removeFromCart(productId); return; }
-            if (newQty > item.stock) { ui.showToast('Stock máximo alcanzado', 'error'); return; }
             item.quantity = newQty;
             renderCart();
         }
@@ -129,12 +122,7 @@ const consumption = (function() {
         if (item) {
             const newQty = parseFloat(value) || 0;
             if (newQty <= 0) { removeFromCart(productId); return; }
-            if (newQty > item.stock) {
-                ui.showToast(`Stock máximo: ${item.stock}`, 'error');
-                item.quantity = item.stock;
-            } else {
-                item.quantity = newQty;
-            }
+            item.quantity = newQty;
             renderCart();
         }
     }
@@ -172,7 +160,6 @@ const consumption = (function() {
                         <input
                             type="number"
                             min="1"
-                            max="${item.stock}"
                             value="${item.quantity}"
                             onchange="consumption.setQuantity('${item.id}', this.value)"
                             class="w-14 text-center text-sm font-bold border border-gray-300 rounded p-1 focus:ring-1 focus:ring-blue-400 outline-none"
@@ -224,11 +211,6 @@ const consumption = (function() {
             const lots = allLots
                 .filter(l => String(l.ProductoID).trim() === String(item.id).trim() && parseFloat(l.CantidadRestante) > EPSILON)
                 .sort((a, b) => ui.parseAppSheetDate(a.FechaRegistro) - ui.parseAppSheetDate(b.FechaRegistro));
-
-            if (lots.length === 0) {
-                ui.showToast(`No se encontraron lotes con stock para: ${item.name}`, 'error');
-                continue;
-            }
 
             for (const lot of lots) {
                 if (remaining <= EPSILON) break;
