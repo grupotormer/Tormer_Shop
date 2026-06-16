@@ -2,6 +2,7 @@
  * Discharges Module
  * - Handles inventory discharge for expired, exploded, or unfit products.
  * - Uses FIFO lot management for stock deduction.
+ * - Integrated with AppSheet 'DescargosDeInventario' table.
  */
 const discharges = (function() {
     let products = [];
@@ -222,19 +223,16 @@ const discharges = (function() {
                 if (remaining <= EPSILON) break;
                 const lotQty = parseFloat(lot.CantidadRestante) || 0;
                 const consume = Math.min(lotQty, remaining);
-                const itemCost = parseFloat(lot.Costo) || 0;
 
                 dischargeRows.push({
-                    ID: Math.random().toString(36).substr(2, 9).toUpperCase(),
-                    ProductoID: item.id,
-                    Responsable: responsible,
-                    Centro: center,
-                    Motivo: reason,
-                    ClaseMovimientoID: movementId,
+                    IDTransaccion: Math.random().toString(36).substr(2, 9).toUpperCase(),
+                    Usuario: responsible,
+                    IDProducto: item.id,
+                    FechaYHora: now,
                     Cantidad: consume,
-                    CostoUnitario: itemCost,
-                    Total: parseFloat((itemCost * consume).toFixed(2)),
-                    Fecha: now
+                    TextoCabecera: reason,
+                    ClaseDeMovimiento: movementId,
+                    Centro: center
                 });
 
                 lotUpdates.push({
@@ -247,24 +245,21 @@ const discharges = (function() {
             // Fallback for missing lots
             if (remaining > EPSILON) {
                 dischargeRows.push({
-                    ID: Math.random().toString(36).substr(2, 9).toUpperCase(),
-                    ProductoID: item.id,
-                    Responsable: responsible,
-                    Centro: center,
-                    Motivo: reason,
-                    ClaseMovimientoID: movementId,
+                    IDTransaccion: Math.random().toString(36).substr(2, 9).toUpperCase(),
+                    Usuario: responsible,
+                    IDProducto: item.id,
+                    FechaYHora: now,
                     Cantidad: remaining,
-                    CostoUnitario: item.cost || 0,
-                    Total: parseFloat(((item.cost || 0) * remaining).toFixed(2)),
-                    Fecha: now
+                    TextoCabecera: reason,
+                    ClaseDeMovimiento: movementId,
+                    Centro: center
                 });
             }
         }
 
         if (dischargeRows.length === 0) return;
 
-        // Try adding to 'Descargos' table
-        const result = await api.addRecords('Descargos', dischargeRows);
+        const result = await api.addRecords('DescargosDeInventario', dischargeRows);
         if (!result) return;
 
         if (lotUpdates.length > 0) await api.editRecords('Compras', lotUpdates);
