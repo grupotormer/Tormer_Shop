@@ -199,6 +199,12 @@ const consumption = (function() {
     async function processConsumption() {
         if (cart.length === 0) return;
 
+        // Check for zero cost items
+        const zeroCostItems = cart.filter(item => !item.cost || item.cost <= 0);
+        if (zeroCostItems.length > 0) {
+            ui.showToast(`Advertencia: ${zeroCostItems.length} productos tienen costo $0.00`, 'info');
+        }
+
         const responsible = document.getElementById('cons-customer-name').value || 'Consumo Interno';
         const now = ui.formatDateForAPI(new Date());
 
@@ -218,6 +224,11 @@ const consumption = (function() {
             const lots = allLots
                 .filter(l => String(l.ProductoID).trim() === String(item.id).trim() && parseFloat(l.CantidadRestante) > EPSILON)
                 .sort((a, b) => ui.parseAppSheetDate(a.FechaRegistro) - ui.parseAppSheetDate(b.FechaRegistro));
+
+            if (lots.length === 0) {
+                ui.showToast(`No se encontraron lotes con stock para: ${item.name}`, 'error');
+                continue;
+            }
 
             for (const lot of lots) {
                 if (remaining <= EPSILON) break;
@@ -257,7 +268,10 @@ const consumption = (function() {
             }
         }
 
-        if (consumptionRows.length === 0) return;
+        if (consumptionRows.length === 0) {
+            ui.showToast('No se generaron registros de consumo. Verifique el stock.', 'error');
+            return;
+        }
 
         const result = await api.addRecords('Consumo_interno', consumptionRows);
         if (!result) return;
