@@ -46,6 +46,9 @@ const ui = (function() {
             case 'dashboard':
                 dashboard.init();
                 break;
+            case 'cash':
+                cash.init();
+                break;
             case 'expirations':
                 dashboard.loadExpirations();
                 break;
