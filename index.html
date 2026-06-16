@@ -24,6 +24,7 @@
                         <button onclick="ui.switchView('discharges')" class="hover:bg-blue-700 px-3 py-2 rounded transition">Descargo</button>
                         <button onclick="ui.switchView('inventory')" class="hover:bg-blue-700 px-3 py-2 rounded transition">Abastecimiento</button>
                         <button onclick="ui.switchView('dashboard')" class="hover:bg-blue-700 px-3 py-2 rounded transition">Dashboard</button>
+                        <button onclick="ui.switchView('cash')" class="hover:bg-blue-700 px-3 py-2 rounded transition">Caja</button>
                         <button onclick="ui.switchView('expirations')" class="hover:bg-blue-700 px-3 py-2 rounded transition">Vencimientos</button>
                     </div>
                 </div>
@@ -41,6 +42,7 @@
             <button onclick="ui.switchView('discharges')" class="block w-full text-left px-3 py-2 rounded hover:bg-blue-800">Descargo</button>
             <button onclick="ui.switchView('inventory')" class="block w-full text-left px-3 py-2 rounded hover:bg-blue-800">Abastecimiento</button>
             <button onclick="ui.switchView('dashboard')" class="block w-full text-left px-3 py-2 rounded hover:bg-blue-800">Dashboard</button>
+            <button onclick="ui.switchView('cash')" class="block w-full text-left px-3 py-2 rounded hover:bg-blue-800">Caja</button>
             <button onclick="ui.switchView('expirations')" class="block w-full text-left px-3 py-2 rounded hover:bg-blue-800">Vencimientos</button>
         </div>
     </nav>
@@ -310,6 +312,87 @@
                 </form>
             </div>
         </section>
+        <!-- Cash Reconciliation View -->
+        <section id="view-cash" class="view-section hidden">
+            <div class="max-w-4xl mx-auto space-y-6">
+                <div class="bg-white p-6 rounded-lg shadow-lg">
+                    <h2 class="text-2xl font-bold mb-6 text-gray-800 border-b pb-2"><i class="fas fa-cash-register mr-2 text-green-600"></i>Cuadratura de Caja</h2>
+
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                        <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                            <label class="block text-sm font-bold text-blue-800 uppercase mb-1">Base de Caja</label>
+                            <input type="number" id="cash-base" step="any" value="0.00" oninput="cash.calculateTotals()" class="w-full p-2 border rounded text-lg font-bold focus:ring-2 focus:ring-blue-500 outline-none">
+                            <p class="text-xs text-blue-600 mt-1">Efectivo inicial</p>
+                        </div>
+                        <div class="bg-green-50 p-4 rounded-lg border border-green-200">
+                            <label class="block text-sm font-bold text-green-800 uppercase mb-1">Ventas del Día</label>
+                            <div id="cash-sales-total" class="text-2xl font-black text-green-700">$0.00</div>
+                            <p class="text-xs text-green-600 mt-1">Total de ventas registradas</p>
+                        </div>
+                        <div class="bg-purple-50 p-4 rounded-lg border border-purple-200">
+                            <label class="block text-sm font-bold text-purple-800 uppercase mb-1">Total Esperado</label>
+                            <div id="cash-expected" class="text-2xl font-black text-purple-700">$0.00</div>
+                            <p class="text-xs text-purple-600 mt-1">Base + Ventas</p>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+                        <div class="bg-gray-50 p-6 rounded-lg border border-gray-200">
+                            <label class="block text-sm font-bold text-gray-700 uppercase mb-3">Efectivo Real en Caja</label>
+                            <input type="number" id="cash-actual" step="any" placeholder="0.00" oninput="cash.calculateTotals()" class="w-full p-4 border-2 border-blue-300 rounded-xl text-3xl font-black text-center focus:ring-4 focus:ring-blue-200 outline-none mb-4">
+
+                            <div class="flex justify-between items-center p-4 rounded-lg bg-white border">
+                                <span class="font-bold text-gray-600">Diferencia:</span>
+                                <span id="cash-diff" class="text-2xl font-black text-gray-800">$0.00</span>
+                            </div>
+                            <p id="cash-diff-msg" class="text-center text-sm font-bold mt-2"></p>
+                        </div>
+
+                        <div class="space-y-4">
+                            <div class="bg-white p-4 rounded-lg border border-gray-200">
+                                <h3 class="text-sm font-bold text-gray-500 uppercase mb-2">Resumen de Hoy</h3>
+                                <div class="flex justify-between py-1 border-b border-gray-100">
+                                    <span>Ventas Brutas:</span>
+                                    <span id="cash-summary-gross">$0.00</span>
+                                </div>
+                                <div class="flex justify-between py-1 border-b border-gray-100">
+                                    <span>Impuestos (13%):</span>
+                                    <span id="cash-summary-tax">$0.00</span>
+                                </div>
+                                <div class="flex justify-between py-1 font-bold">
+                                    <span>Ventas Netas:</span>
+                                    <span id="cash-summary-net">$0.00</span>
+                                </div>
+                            </div>
+                            <button onclick="cash.printClosure()" class="w-full bg-blue-600 text-white font-bold py-4 rounded-xl hover:bg-blue-700 transition shadow-lg flex items-center justify-center">
+                                <i class="fas fa-print mr-2"></i> IMPRIMIR CIERRE
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Daily Sales Table -->
+                <div class="bg-white p-6 rounded-lg shadow-lg overflow-hidden">
+                    <h3 class="text-lg font-bold mb-4 text-gray-800">Detalle de Ventas de Hoy</h3>
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Hora</th>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Producto</th>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Cant.</th>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Total</th>
+                                </tr>
+                            </thead>
+                            <tbody id="cash-sales-table-body" class="bg-white divide-y divide-gray-200">
+                                <!-- Sales will be injected here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </section>
+
         <!-- Dashboard View -->
         <section id="view-dashboard" class="view-section hidden">
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8 text-center">
@@ -398,6 +481,7 @@
     <script src="js/discharges.js"></script>
     <script src="js/inventory.js"></script>
     <script src="js/dashboard.js"></script>
+    <script src="js/cash.js"></script>
     <script src="js/scanner.js"></script>
     <script>
         // Initial setup
